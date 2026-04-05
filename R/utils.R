@@ -224,3 +224,117 @@ extract_variance_components <- function(model) {
   sigmas[["Residual"]] <- attr(vc, "sc")^2
   sigmas
 }
+
+# ============================================================================
+# Phase 4 (Step 31-33): Genetics helper utilities
+# ============================================================================
+
+#' Format an Effect Size for Display
+#'
+#' Formats a regression coefficient (effect size) with its standard error
+#' as a combined string, suitable for GWAS result tables and reports.
+#'
+#' @param beta Numeric.  Estimated effect size (regression coefficient).
+#' @param se Numeric.  Standard error of the estimate.
+#' @param digits Integer.  Number of decimal places (default `4L`).
+#'
+#' @return A character string of the form `"beta (se)"`.
+#'
+#' @examples
+#' format_effect_size(0.1234, 0.0456)
+#'
+#' @export
+format_effect_size <- function(beta, se, digits = 4L) {
+  if (anyNA(c(beta, se))) return("NA (NA)")
+  sprintf(
+    "%s (%s)",
+    formatC(beta, format = "f", digits = digits),
+    formatC(se,   format = "f", digits = digits)
+  )
+}
+
+#' Bootstrap Confidence Interval for Heritability
+#'
+#' A thin wrapper that generates bootstrap confidence intervals for any
+#' heritability ratio from raw variance component vectors.  Intended as a
+#' reusable building block.
+#'
+#' @param v_g Numeric.  Genetic (numerator) variance.
+#' @param v_e Numeric.  Residual (denominator) variance.
+#' @param n_boot Integer.  Number of bootstrap replicates (default `1000L`).
+#' @param ci_level Numeric.  Confidence level (default `0.95`).
+#' @param seed Integer or `NULL`.  Random seed.
+#'
+#' @return A two-element numeric vector `c(lower, upper)`.
+#'
+#' @keywords internal
+compute_heritability_ci <- function(v_g, v_e, n_boot = 1000L,
+                                    ci_level = 0.95, seed = NULL) {
+  if (!is.null(seed)) set.seed(seed)
+  alpha <- (1 - ci_level) / 2
+  boots <- replicate(n_boot, {
+    bvg <- stats::rgamma(1, shape = max(v_g, 1e-9), rate = 1)
+    bve <- stats::rgamma(1, shape = max(v_e, 1e-9), rate = 1)
+    bvg / (bvg + bve)
+  })
+  stats::quantile(boots, c(alpha, 1 - alpha), names = FALSE)
+}
+
+#' Validate Marker Genotype Data
+#'
+#' Performs quality-control checks on a marker genotype matrix and returns
+#' a summary QC report.  Checks include missing-data rate, minor allele
+#' frequency, and monomorphic markers.
+#'
+#' @param marker_mat Numeric matrix (individuals x markers, 0/1/2 coding).
+#' @param min_maf Numeric.  Minimum acceptable minor allele frequency
+#'   (default `0.05`).
+#' @param max_missing Numeric.  Maximum acceptable per-marker missing rate
+#'   (default `0.20`).
+#'
+#' @return A list with components:
+#'   \describe{
+#'     \item{qc_table}{Data frame with per-marker statistics.}
+#'     \item{n_fail_maf}{Number of markers below `min_maf`.}
+#'     \item{n_fail_missing}{Number of markers above `max_missing`.}
+#'     \item{n_monomorphic}{Number of monomorphic markers.}
+#'     \item{pass_markers}{Character vector of markers passing all filters.}
+#'   }
+#'
+#' @keywords internal
+validate_marker_data <- function(marker_mat, min_maf = 0.05,
+                                 max_missing = 0.20) {
+  if (!is.matrix(marker_mat))
+    rlang::abort("`marker_mat` must be a numeric matrix.")
+
+  n_mrk      <- ncol(marker_mat)
+  mrk_names  <- if (!is.null(colnames(marker_mat)))
+                  colnames(marker_mat)
+                else paste0("M", seq_len(n_mrk))
+
+  miss_rate  <- apply(marker_mat, 2, function(x) mean(is.na(x)))
+  allele_frq <- apply(marker_mat, 2, function(x) mean(x, na.rm = TRUE) / 2)
+  maf        <- pmin(allele_frq, 1 - allele_frq)
+  mono       <- apply(marker_mat, 2,
+                      function(x) length(unique(x[!is.na(x)])) <= 1L)
+
+  qc_table <- data.frame(
+    marker       = mrk_names,
+    missing_rate = miss_rate,
+    maf          = maf,
+    monomorphic  = mono,
+    stringsAsFactors = FALSE
+  )
+
+  fail_maf     <- maf < min_maf
+  fail_missing <- miss_rate > max_missing
+  pass_markers <- mrk_names[!fail_maf & !fail_missing & !mono]
+
+  list(
+    qc_table        = qc_table,
+    n_fail_maf      = sum(fail_maf, na.rm = TRUE),
+    n_fail_missing  = sum(fail_missing, na.rm = TRUE),
+    n_monomorphic   = sum(mono, na.rm = TRUE),
+    pass_markers    = pass_markers
+  )
+}

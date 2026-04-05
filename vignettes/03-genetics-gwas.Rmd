@@ -1,0 +1,251 @@
+---
+title: "Module 3: Breeding & Genetics Analytics"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Module 3: Breeding & Genetics Analytics}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse  = TRUE,
+  comment   = "#>",
+  eval      = FALSE
+)
+```
+
+## Overview
+
+Module 3 of **agristat** provides tools for breeding programme design and
+quantitative genetics analysis:
+
+- **Experimental designs**: alpha-lattice and augmented designs for large
+  multi-genotype trials
+- **GxE analysis**: multi-environment trial (MET) decomposition
+- **AMMI**: additive main effects and multiplicative interaction modelling
+- **Heritability**: broad- and narrow-sense estimates with bootstrap CIs
+- **QTL mapping**: data preparation and LOD visualisation
+- **GWAS**: genome-wide association with Manhattan and Q-Q plots
+
+## Experimental Designs
+
+### Alpha-Lattice Design (large trials)
+
+An alpha-lattice design is a resolvable balanced incomplete block design
+suitable for evaluating 100+ genotypes.  Each replicate contains every
+genotype exactly once, distributed across equal-sized incomplete blocks.
+
+```{r alpha-lattice}
+library(agristat)
+
+# 100 genotypes, blocks of 10, 3 replicates
+design_al <- design_alpha_lattice(
+  num_genotypes = 100L,
+  block_size    = 10L,
+  replicates    = 3L,
+  seed          = 2024L
+)
+
+head(design_al)
+nrow(design_al) # 300 plots total
+```
+
+### Augmented Design (unreplicated test lines + replicated checks)
+
+```{r augmented}
+test_lines  <- paste0("Line", sprintf("%03d", 1:200))
+check_vars  <- c("Std_Check_1", "Std_Check_2", "Std_Check_3")
+
+design_aug <- design_augmented(
+  test_genotypes    = test_lines,
+  check_genotypes   = check_vars,
+  replicates_checks = 5L,    # 5 blocks
+  seed              = 101L
+)
+
+table(design_aug$type)
+```
+
+## GxE Interaction Analysis
+
+```{r gxe}
+# Simulate multi-environment trial
+set.seed(1L)
+met_data <- expand.grid(
+  genotype    = paste0("G", 1:10),
+  environment = paste0("E", 1:6),
+  stringsAsFactors = FALSE
+)
+# Add simulated yield with GxE
+met_data$yield <- rnorm(nrow(met_data), mean = 5, sd = 1) +
+  rep(c(0.5, -0.5, 0.2, -0.2, 0.3, -0.3), each = 10)
+
+gxe_res <- analyze_gxe(met_data, response = "yield")
+gxe_res
+summary(gxe_res)
+```
+
+## AMMI Analysis
+
+AMMI (Additive Main Effects and Multiplicative Interaction) decomposes the
+GxE interaction matrix using SVD.
+
+### Fitting the AMMI Model
+
+```{r ammi-fit}
+am_res <- fit_ammi(met_data, response = "yield")
+print(am_res)
+summary(am_res)
+```
+
+### AMMI Biplot
+
+```{r ammi-biplot, fig.width=7, fig.height=6}
+p_biplot <- plot_ammi_biplot(am_res, pc_x = 1L, pc_y = 2L)
+print(p_biplot)
+```
+
+The biplot shows:
+- **Blue points**: genotype scores (distance from origin indicates
+  sensitivity to the environment)
+- **Red arrows**: environment loadings (arrow direction indicates
+  discriminating ability)
+
+## Heritability Estimation
+
+### Input: variance components from a REML fit
+
+```{r heritability}
+vc_df <- data.frame(
+  source   = c("genotype", "additive", "residual"),
+  variance = c(2.5,       1.8,       1.0)
+)
+
+h_res <- calc_heritability(vc_df, n_boot = 500L, ci_level = 0.95, seed = 42L)
+print(h_res)
+summary(h_res)
+```
+
+**Broad-sense heritability** \(H^2\) captures all genetic effects
+(additive, dominance, epistasis).  **Narrow-sense heritability**
+\(h^2\) captures only additive effects and predicts parent-offspring
+resemblance.
+
+## QTL Mapping
+
+### Preparing Data
+
+```{r qtl-prep}
+set.seed(200L)
+n_ind  <- 100L
+n_mrk  <- 50L
+
+pheno_df <- data.frame(
+  id    = paste0("F2_", seq_len(n_ind)),
+  yield = rnorm(n_ind, mean = 8, sd = 1.5)
+)
+
+marker_mat <- matrix(
+  sample(0:2, n_ind * n_mrk, replace = TRUE),
+  nrow     = n_ind,
+  dimnames = list(paste0("F2_", seq_len(n_ind)),
+                  paste0("M", seq_len(n_mrk)))
+)
+
+qtl_input <- prepare_qtl_data(pheno_df, marker_mat)
+str(qtl_input)
+```
+
+### Visualising LOD Scores
+
+```{r qtl-plot, fig.width=8, fig.height=4}
+# Simulate a LOD scan result
+lod_scan <- data.frame(
+  chr = rep(1:5, each = 20L),
+  pos = rep(seq(0, 95, 5), 5L),
+  lod = abs(rnorm(100L, mean = 1, sd = 1.5))
+)
+
+p_qtl <- plot_qtl_map(lod_scan, threshold = 3.0, trait_name = "Grain Yield")
+print(p_qtl)
+```
+
+## GWAS Pipeline
+
+### Running the Association Analysis
+
+```{r gwas-run}
+set.seed(300L)
+n_ind  <- 200L
+n_snps <- 500L
+
+pheno_gwas <- rnorm(n_ind, mean = 10, sd = 2)
+
+snp_matrix <- matrix(
+  sample(0:2, n_ind * n_snps, replace = TRUE,
+         prob = c(0.25, 0.50, 0.25)),
+  nrow     = n_ind,
+  dimnames = list(NULL, paste0("SNP", seq_len(n_snps)))
+)
+
+snp_positions <- data.frame(
+  marker     = paste0("SNP", seq_len(n_snps)),
+  chromosome = rep(1:10, each = 50L),
+  position   = rep(seq(1e5, 5e6, length.out = 50L), 10L)
+)
+
+gwas_out <- run_basic_gwas(
+  phenotype       = pheno_gwas,
+  marker_genotypes = snp_matrix,
+  marker_positions = snp_positions,
+  trait_type       = "quantitative",
+  min_maf          = 0.05
+)
+
+print(gwas_out)
+summary(gwas_out)
+```
+
+### Manhattan Plot
+
+```{r manhattan, fig.width=10, fig.height=5}
+p_man <- plot_manhattan(
+  gwas_out,
+  title   = "GWAS: Grain Yield",
+  top_n   = 5L
+)
+print(p_man)
+```
+
+### Q-Q Plot (Genomic Inflation)
+
+```{r qq-plot, fig.width=6, fig.height=6}
+p_qq <- plot_qq_gwas(gwas_out, title = "Q-Q Plot: Grain Yield GWAS")
+print(p_qq)
+```
+
+A Q-Q plot close to the diagonal indicates the null hypothesis holds for
+most markers (no inflation).  The genomic inflation factor \(\lambda\)
+should be close to 1.0 under a well-controlled study.
+
+## Key Concepts
+
+| Concept | Interpretation |
+|---|---|
+| \(H^2 \geq 0.8\) | High heritability: selection is highly effective |
+| AMMI IPCA1 > 70% | Single multiplicative term explains most interaction |
+| LOD > 3.0 | Genome-wide significant QTL |
+| GWAS \(-\log_{10}(p) > 7.3\) | Bonferroni-significant with 50 million SNPs |
+| \(\lambda > 1.05\) | Possible population structure inflation |
+
+## References
+
+- Gauch, H. G. (1988). Model selection and validation for yield trials.
+  *Biometrics*, 44, 705--715.
+- Falconer, D. S. & Mackay, T. F. C. (1996). *Introduction to Quantitative
+  Genetics* (4th ed.). Longman.
+- Visscher, P. M. et al. (2017). 10 years of GWAS discovery.
+  *American Journal of Human Genetics*, 101, 5--22.
+- Federer, W. T. (1956). Augmented designs. *Hawaiian Planters's Record*,
+  55, 191--208.
