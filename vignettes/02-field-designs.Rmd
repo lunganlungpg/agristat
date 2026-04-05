@@ -1,0 +1,270 @@
+---
+title: "Field Layout Engine: CRD, RCBD, Factorial, Split-Plot, and Latin Square Designs"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Field Layout Engine: CRD, RCBD, Factorial, Split-Plot, and Latin Square Designs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  fig.width  = 7,
+  fig.height = 5
+)
+library(agristat)
+set.seed(42L)
+```
+
+## Introduction
+
+Module 2 of the **agristat** package provides a complete toolkit for generating
+and analysing common experimental designs in agricultural research:
+
+- **CRD** — Completely Randomised Design  
+- **RCBD** — Randomised Complete Block Design  
+- **Factorial** — 2-way, 3-way, and n-way factorial designs  
+- **Split-Plot** — Split-plot, split-split-plot, and strip-plot designs  
+- **Latin Square** — Two-way blocking with row and column control  
+
+Every `design_*()` function returns an S3 object of class `field_design` that
+stores the plot-level layout, error structure, and metadata.  The
+`analyze_design()` dispatcher automatically selects the correct ANOVA model for
+each design type.
+
+---
+
+## 1. Completely Randomised Design (CRD)
+
+A CRD is appropriate when experimental material is homogeneous.  Treatments are
+assigned to plots in a completely random order with no blocking.
+
+```{r crd}
+d_crd <- design_crd(
+  treatments = c("Control", "Low-N", "High-N"),
+  replicates = 4L,
+  seed       = 42L
+)
+print(d_crd)
+```
+
+### Visualise the layout
+
+```{r crd-plot}
+plot_field_layout(d_crd, title = "CRD: Nitrogen Treatments")
+```
+
+### Simulate data and run ANOVA
+
+```{r crd-anova}
+set.seed(1L)
+df_crd         <- d_crd$layout
+df_crd$yield   <- c(
+  rnorm(4, mean = 3.2, sd = 0.4),   # Control
+  rnorm(4, mean = 4.1, sd = 0.4),   # Low-N
+  rnorm(4, mean = 5.0, sd = 0.4)    # High-N
+)
+result_crd <- analyze_design(d_crd, response = "yield", data = df_crd)
+summary(result_crd)
+```
+
+### Diagnostic plots
+
+```{r crd-diag, fig.height = 6}
+plot_anova_diagnostics(result_crd, which = 1:2)
+```
+
+---
+
+## 2. Randomised Complete Block Design (RCBD)
+
+RCBD is used when there is a known source of field variation (e.g., a soil
+fertility gradient).  Each block contains one complete set of treatments.
+
+```{r rcbd}
+d_rcbd <- design_rcbd(
+  treatments = c("V1", "V2", "V3", "V4"),
+  blocks     = 4L,
+  seed       = 7L
+)
+print(d_rcbd)
+```
+
+```{r rcbd-plot}
+plot_field_layout(d_rcbd, title = "RCBD: Variety Trial")
+```
+
+```{r rcbd-anova}
+set.seed(2L)
+df_rcbd         <- d_rcbd$layout
+block_effect    <- as.numeric(df_rcbd$block) * 0.5
+trt_effect      <- c(V1 = 0, V2 = 0.8, V3 = 1.5, V4 = 2.2)[df_rcbd$treatment]
+df_rcbd$yield   <- 10 + block_effect + trt_effect + rnorm(nrow(df_rcbd), 0, 0.3)
+
+result_rcbd <- analyze_design(d_rcbd, response = "yield", data = df_rcbd)
+summary(result_rcbd)
+```
+
+---
+
+## 3. Factorial Design
+
+A factorial design crosses all combinations of two or more factors.  All main
+effects and interaction terms are estimable.
+
+```{r factorial}
+d_fact <- design_factorial(
+  factor_names  = c("Nitrogen", "Variety"),
+  factor_levels = list(
+    Nitrogen = c("Low", "High"),
+    Variety  = c("V1", "V2", "V3")
+  ),
+  replicates = 3L,
+  seed       = 1L
+)
+print(d_fact)
+cat("Contrast terms:", paste(d_fact$metadata$contrast_coding, collapse = ", "), "\n")
+```
+
+```{r factorial-plot}
+plot_field_layout(d_fact, title = "2 x 3 Factorial Layout")
+```
+
+```{r factorial-anova}
+set.seed(3L)
+df_fact         <- d_fact$layout
+df_fact$yield   <- with(df_fact, {
+  mu <- 10
+  n  <- ifelse(Nitrogen == "High", 1.2, 0)
+  v  <- c(V1 = 0, V2 = 0.5, V3 = 1.0)[Variety]
+  mu + n + v + n * v * 0.3 + rnorm(nrow(df_fact), 0, 0.4)
+})
+result_fact <- analyze_design(d_fact, response = "yield", data = df_fact)
+summary(result_fact)
+```
+
+---
+
+## 4. Split-Plot Design
+
+Split-plot designs arise when it is impractical to randomise all factor
+combinations within each block.  The whole-plot factor is applied to large
+experimental units; the sub-plot factor is applied within each whole-plot.
+
+```{r split-plot}
+d_sp <- design_split_plot(
+  whole_plot_factor = c("Irrigation-On", "Irrigation-Off"),
+  sub_plot_factor   = c("V1", "V2", "V3"),
+  blocks            = 4L,
+  seed              = 99L
+)
+print(d_sp)
+```
+
+```{r split-plot-errors}
+compute_error_terms(d_sp)
+```
+
+```{r split-plot-anova}
+set.seed(4L)
+df_sp         <- d_sp$layout
+df_sp$yield   <- with(df_sp, {
+  irr <- ifelse(whole_plot_level == "Irrigation-On", 2, 0)
+  var <- c(V1 = 0, V2 = 0.8, V3 = 1.5)[sub_plot_level]
+  10 + irr + var + rnorm(nrow(df_sp), 0, 0.5)
+})
+result_sp <- analyze_design(d_sp, response = "yield", data = df_sp)
+summary(result_sp)
+```
+
+---
+
+## 5. Latin Square Design
+
+A Latin Square provides two-way blocking, controlling variation in two
+orthogonal directions (rows and columns).  Each treatment appears exactly
+once in each row and each column.
+
+```{r latin-square}
+d_ls <- design_latin_square(
+  factor_levels = c("A", "B", "C", "D"),
+  seed          = 2024L
+)
+print(d_ls)
+```
+
+```{r latin-square-plot}
+plot_field_layout(d_ls, title = "4 x 4 Latin Square")
+```
+
+```{r latin-square-anova}
+set.seed(5L)
+df_ls         <- d_ls$layout
+df_ls$yield   <- with(df_ls, {
+  trt_eff <- c(A = 0, B = 0.5, C = 1.2, D = 2.0)[treatment]
+  row_eff <- (as.numeric(row) - 2.5) * 0.3
+  col_eff <- (as.numeric(column) - 2.5) * 0.2
+  10 + trt_eff + row_eff + col_eff + rnorm(nrow(df_ls), 0, 0.3)
+})
+result_ls <- analyze_design(d_ls, response = "yield", data = df_ls)
+summary(result_ls)
+```
+
+---
+
+## 6. Error Structure Inspection
+
+You can inspect the theoretical error structure of any design with
+`get_error_structure()`:
+
+```{r error-structure}
+# Split-plot: two error strata
+es_sp <- get_error_structure(d_sp)
+str(es_sp)
+```
+
+---
+
+## 7. Strip-Plot and Split-Split-Plot
+
+```{r strip-plot}
+d_strip <- design_strip_plot(
+  row_factor = c("Herbicide-A", "Herbicide-B", "Herbicide-C"),
+  col_factor = c("Low-N", "Mid-N", "High-N"),
+  blocks     = 3L,
+  seed       = 22L
+)
+print(d_strip)
+get_error_structure(d_strip)
+```
+
+```{r split-split-plot}
+d_ssp <- design_split_split_plot(
+  whole_plot_factor   = c("Tillage-Deep", "Tillage-Shallow"),
+  sub_plot_factor     = c("Irrigation-On", "Irrigation-Off"),
+  sub_sub_plot_factor = c("V1", "V2"),
+  blocks              = 3L,
+  seed                = 5L
+)
+print(d_ssp)
+names(d_ssp$error_structure)
+```
+
+---
+
+## Summary
+
+| Function | Design | ANOVA model |
+|---|---|---|
+| `design_crd()` | CRD | `aov(y ~ treatment)` |
+| `design_rcbd()` | RCBD | `aov(y ~ treatment + block)` |
+| `design_factorial()` | Factorial | `aov(y ~ A * B * ...)` |
+| `design_split_plot()` | Split-plot | `lmer(y ~ A * B + (1|wp))` |
+| `design_split_split_plot()` | Split-split-plot | `lmer(...)` |
+| `design_strip_plot()` | Strip-plot | `aov(y ~ block + A + B + A:B)` |
+| `design_latin_square()` | Latin Square | `aov(y ~ row + column + treatment)` |
+
+All designs use `analyze_design()` as a unified dispatcher, and their layouts
+can be visualised with `plot_field_layout()`.
