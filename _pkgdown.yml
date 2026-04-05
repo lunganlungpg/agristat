@@ -1,0 +1,118 @@
+url: https://lunganlungpg.github.io/agristat/
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+home:
+  title: "agristat — Biostatistical Suite for Agricultural & Genetic Research"
+  description: >
+    A comprehensive R package for agricultural and genetic research implementing
+    six integrated analytical modules from data ingestion to thesis-ready output.
+  links:
+    - text: Browse source code
+      href: https://github.com/lunganlungpg/agristat
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, github]
+  components:
+    home:
+      icon: fa-home
+      href: index.html
+    intro:
+      text: Get Started
+      href: articles/agristat.html
+    reference:
+      text: Reference
+      href: reference/index.html
+    articles:
+      text: Articles
+      menu:
+        - text: Data Ingestion & Pre-Processing
+          href: articles/data-ingestion.html
+        - text: Field Layout Engine
+          href: articles/field-layouts.html
+        - text: Breeding & Genetics Analytics
+          href: articles/genetics.html
+        - text: Mean Separation & Post-Hoc Tests
+          href: articles/posthoc.html
+        - text: Phylogenetics & Evolutionary Mapping
+          href: articles/phylogenetics.html
+        - text: Thesis Assembly Export Suite
+          href: articles/thesis-export.html
+    news:
+      text: News
+      href: news/index.html
+    github:
+      icon: fa-github
+      href: https://github.com/lunganlungpg/agristat
+
+reference:
+  - title: "Package overview"
+    desc: >
+      Top-level package documentation.
+    contents:
+      - agristat-package
+
+  - title: "Module 1 — Data Ingestion & Pre-Processing"
+    desc: >
+      Functions for importing field trial data, declaring hypotheses, and
+      testing statistical assumptions.
+    contents:
+      - starts_with("declare_hypothesis")
+      - starts_with("check_assumptions")
+      - starts_with("auto_transform")
+      - starts_with("suggest_nonparametric")
+      - starts_with("chi_square_segregation")
+      - starts_with("import_field_data")
+
+  - title: "Module 2 — Field Layout Engine"
+    desc: >
+      Tools for constructing and visualising agricultural experimental designs.
+    contents:
+      - starts_with("design_")
+      - starts_with("plot_field_layout")
+      - starts_with("randomise_layout")
+
+  - title: "Module 3 — Breeding & Genetics Analytics"
+    desc: >
+      AMMI analysis, GGE biplots, heritability, and combining ability functions.
+    contents:
+      - starts_with("ammi_")
+      - starts_with("gge_")
+      - starts_with("heritability_")
+      - starts_with("combining_ability")
+      - starts_with("stability_")
+      - starts_with("genetic_")
+
+  - title: "Module 4 — Mean Separation & Post-Hoc Tests"
+    desc: >
+      Multiple comparison procedures and mean separation letter formatting.
+    contents:
+      - ends_with("_test")
+      - starts_with("format_mean_table")
+
+  - title: "Module 5 — Phylogenetics & Evolutionary Mapping"
+    desc: >
+      Phylogenetic tree construction, genetic distances, and trait mapping.
+    contents:
+      - starts_with("build_phylo")
+      - starts_with("compute_distances")
+      - starts_with("map_traits")
+      - starts_with("plot_phylo")
+      - starts_with("bootstrap_tree")
+      - starts_with("parse_sequences")
+
+  - title: "Module 6 — Thesis Assembly Export Suite"
+    desc: >
+      Publication-ready tables, figures, and report generation utilities.
+    contents:
+      - starts_with("export_")
+      - starts_with("build_thesis")
+      - starts_with("render_report")
+
+footer:
+  structure:
+    left: developed_by
+    right: built_with
