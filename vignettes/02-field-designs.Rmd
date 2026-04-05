@@ -261,7 +261,7 @@ names(d_ssp$error_structure)
 | `design_crd()` | CRD | `aov(y ~ treatment)` |
 | `design_rcbd()` | RCBD | `aov(y ~ treatment + block)` |
 | `design_factorial()` | Factorial | `aov(y ~ A * B * ...)` |
-| `design_split_plot()` | Split-plot | `lmer(y ~ A * B + (1\|wp))` |
+| `design_split_plot()` | Split-plot | `lmer(y ~ A * B + (1|wp))` |
 | `design_split_split_plot()` | Split-split-plot | `lmer(...)` |
 | `design_strip_plot()` | Strip-plot | `aov(y ~ block + A + B + A:B)` |
 | `design_latin_square()` | Latin Square | `aov(y ~ row + column + treatment)` |

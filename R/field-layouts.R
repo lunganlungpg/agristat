@@ -1195,7 +1195,7 @@ summary.field_design <- function(object, ...) {
 #' @return `x` invisibly.
 #' @export
 print.agristat_aov <- function(x, ...) {
-  cat(sprintf("agristat ANOVA \u2014 Design: %s\n", x$design$design_type))
+  cat(sprintf("agristat ANOVA -- Design: %s\n", x$design$design_type))
   print(x$model, ...)
   invisible(x)
 }
@@ -1208,7 +1208,7 @@ print.agristat_aov <- function(x, ...) {
 #' @return The summary object returned by the underlying model class.
 #' @export
 summary.agristat_aov <- function(object, ...) {
-  cat(sprintf("agristat ANOVA Summary \u2014 Design: %s\n\n",
+  cat(sprintf("agristat ANOVA Summary -- Design: %s\n\n",
               object$design$design_type))
   summary(object$model, ...)
 }
