@@ -144,3 +144,83 @@ interpretation_helper <- function(p, alpha, fail_below = TRUE) {
 .is_whole_number <- function(x, tol = .Machine$double.eps^0.5) {
   is.numeric(x) && all(abs(x - round(x)) < tol)
 }
+
+# ============================================================================
+# Step 21: Error-term helper functions (Phase 3)
+# ============================================================================
+
+#' Get the Error Structure of a Field Design
+#'
+#' Returns the `error_structure` list embedded in a `field_design` object,
+#' providing degrees of freedom and descriptions for each error stratum.
+#'
+#' @param design A `field_design` object.
+#'
+#' @return A named list.  Each element describes one error stratum and
+#'   contains at minimum `$df` (degrees of freedom) and optionally
+#'   `$description`.
+#'
+#' @examples
+#' d <- design_split_plot(
+#'   whole_plot_factor = c("I+", "I-"),
+#'   sub_plot_factor   = c("V1", "V2", "V3"),
+#'   blocks = 4L, seed = 1L
+#' )
+#' get_error_structure(d)
+#'
+#' @seealso [compute_error_terms()], [extract_variance_components()]
+#' @export
+get_error_structure <- function(design) {
+  if (!inherits(design, "field_design")) {
+    rlang::abort("`design` must be a `field_design` object.")
+  }
+  design$error_structure
+}
+
+#' Extract Variance Components from a Mixed-Effects Model
+#'
+#' Extracts the random-effects variance components from a model fitted by
+#' [lme4::lmer()].  Returns a named numeric vector of estimated variances
+#' for each random-effects grouping factor plus the residual.
+#'
+#' @param model A `lmerMod` object (from [lme4::lmer()]) or an
+#'   `agristat_aov` wrapping one.
+#'
+#' @return A named numeric vector.  Names correspond to grouping factors and
+#'   `"Residual"`.  Returns `NA_real_` if the model has no random effects.
+#'
+#' @examples
+#' \donttest{
+#' d  <- design_split_plot(c("I+", "I-"), c("V1", "V2", "V3"),
+#'                         blocks = 4L, seed = 1L)
+#' df <- d$layout
+#' df$yield <- rnorm(nrow(df), mean = 10, sd = 2)
+#' m  <- analyze_design(d, response = "yield", data = df)
+#' extract_variance_components(m)
+#' }
+#'
+#' @seealso [compute_error_terms()], [get_error_structure()]
+#' @export
+extract_variance_components <- function(model) {
+  # Strip agristat_aov wrapper so we can dispatch on the underlying class
+  if (inherits(model, "agristat_aov")) {
+    class(model) <- class(model)[class(model) != "agristat_aov"]
+  }
+  if (!requireNamespace("lme4", quietly = TRUE)) {
+    rlang::abort("Package 'lme4' is required for extract_variance_components().")
+  }
+  if (!inherits(model, "lmerMod")) {
+    rlang::warn(
+      paste0("extract_variance_components() is designed for lmerMod objects.",
+             "  Returning NA.")
+    )
+    return(NA_real_)
+  }
+  vc     <- lme4::VarCorr(model)
+  # Named vector: one entry per grouping factor + residual
+  sigmas <- vapply(vc, function(x) attr(x, "stddev")^2,
+                   FUN.VALUE = numeric(1L))
+  names(sigmas) <- names(vc)
+  sigmas[["Residual"]] <- attr(vc, "sc")^2
+  sigmas
+}
