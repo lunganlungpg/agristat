@@ -1,0 +1,272 @@
+---
+title: "Module 5: Phylogenetics & Evolutionary Mapping"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Module 5: Phylogenetics & Evolutionary Mapping}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(agristat)
+```
+
+## Overview
+
+Module 5 of the **agristat** package provides a complete phylogenetic analysis
+workflow:
+
+1. **`read_fasta()`** — Import and validate DNA/protein sequences
+2. **`align_sequences()`** — Multiple sequence alignment (ClustalOmega / MUSCLE)
+3. **`build_tree_ml()`** — Maximum Likelihood tree construction (GTR, LG, ...)
+4. **`build_tree_nj()`** — Neighbor-Joining tree construction (JC69, p-distance)
+5. **`bootstrap_tree()`** — Bootstrap support values (0–100 %)
+6. **`plot_phylo()`** / **`plot_tree_unrooted()`** — Tree visualisation
+7. **`write_tree()`** — Export to Newick / Nexus
+8. **`reroot_tree()`** — Reroot on outgroup
+
+---
+
+## Example DNA sequences
+
+```{r prepare-fasta}
+dna_lines <- c(
+  ">AtCOI_Arabidopsis",  "ATGCATGCATGCATGCATGCATGCATGCATGCATGCATGC",
+  ">OsCOI_Oryza",        "ATGCTTGCATGCATGCTTGCATGCTTGCATGCTTGCATGC",
+  ">ZmCOI_Maize",        "ATGCATGCTTGCATGCATGCTTGCATGCATGCTTGCATGC",
+  ">SbCOI_Sorghum",      "ATGCATGCATGCTTGCATGCATGCATGCATGCTTGCATGC",
+  ">HvCOI_Barley",       "ATGCATGCATGCATGCTTGCATGCATGCATGCATGCTTGC"
+)
+tmp_fasta <- tempfile(fileext = ".fasta")
+writeLines(dna_lines, tmp_fasta)
+```
+
+---
+
+## Step 1: Import and validate sequences
+
+```{r read-fasta}
+seqs <- read_fasta(tmp_fasta)
+print(seqs)
+summary(seqs)
+```
+
+The returned object contains:
+
+- `seqs$sequences` — named character vector of sequences
+- `seqs$type` — `"nucleotide"` or `"protein"`
+- `seqs$stats` — data frame with `name`, `length`, `gc_content`
+- `seqs$metadata` — file, n_seqs, parse_date
+
+```{r fasta-stats}
+seqs$stats
+```
+
+---
+
+## Step 2: Multiple sequence alignment
+
+```{r align}
+# Falls back to gap-padding when msa package is unavailable
+aln <- align_sequences(seqs, method = "clustal")
+print(aln)
+```
+
+```{r aln-matrix}
+# Inspect first few positions of the alignment matrix
+aln$alignment_matrix[, 1:10]
+```
+
+---
+
+## Step 3a: Neighbor-Joining tree
+
+```{r nj-tree, fig.width=6, fig.height=4}
+nj_tree <- build_tree_nj(aln)
+print(nj_tree)
+```
+
+Inspect the pairwise distance matrix:
+
+```{r nj-dm}
+round(nj_tree$distance_matrix, 4)
+```
+
+---
+
+## Step 3b: Maximum Likelihood tree
+
+```{r ml-tree}
+ml_tree <- build_tree_ml(aln, model = "GTR")
+print(ml_tree)
+```
+
+---
+
+## Step 4: Bootstrap support
+
+```{r bootstrap, fig.width=6, fig.height=4}
+bs <- bootstrap_tree(
+  aln,
+  tree_method    = "nj",
+  num_replicates = 100,
+  seed           = 42
+)
+print(bs)
+summary(bs)
+```
+
+```{r support-values}
+bs$support_values
+```
+
+Interpreting bootstrap values:
+
+| Support % | Interpretation          |
+|-----------|-------------------------|
+| ≥ 95      | Very strong support     |
+| 70 – 94   | Moderate support        |
+| 50 – 69   | Weak support            |
+| < 50      | Not reliable            |
+
+---
+
+## Step 5: Tree visualisation
+
+```{r plot-tree, fig.width=7, fig.height=5}
+# Rooted tree with bootstrap support labels
+plot_phylo(bs, main = "NJ Bootstrap Tree", support_threshold = 70)
+```
+
+```{r plot-unrooted, fig.width=7, fig.height=5}
+# Unrooted (radial) display
+plot_tree_unrooted(nj_tree, main = "Unrooted NJ Tree")
+```
+
+---
+
+## Step 6: Rerooting the tree
+
+```{r reroot}
+rerooted <- reroot_tree(nj_tree, outgroup = "HvCOI_Barley")
+class(rerooted)      # ape::phylo
+rerooted$tip.label
+```
+
+---
+
+## Step 7: Exporting trees
+
+```{r write-newick}
+nwk_file <- tempfile(fileext = ".nwk")
+write_tree(bs, file = nwk_file, format = "newick")
+cat(readLines(nwk_file), sep = "\n")
+```
+
+```{r write-nexus}
+nex_file <- tempfile(fileext = ".nex")
+write_tree(bs, file = nex_file, format = "nexus")
+# Show first 10 lines of the NEXUS file
+cat(head(readLines(nex_file, warn = FALSE), 10), sep = "\n")
+```
+
+---
+
+## Step 8: Utility functions
+
+### Validate sequence characters
+
+```{r validate}
+test_seqs <- c(
+  Good    = "ATGCATGCATGCNRYW",
+  BadChar = "ATGZ1234ATGC"
+)
+validate_sequence_format(test_seqs, type = "nucleotide")
+```
+
+### Extract bootstrap values
+
+```{r extract-bs}
+sv <- extract_bootstrap_values(bs)
+hist(sv, main = "Bootstrap Support Distribution",
+     xlab = "Support (%)", col = "steelblue", border = "white")
+```
+
+### Compute distance matrix directly
+
+```{r dist-matrix}
+dm <- compute_distance_matrix(aln$alignment_matrix,
+                               seq_type = "nucleotide",
+                               method   = "JC69")
+round(dm, 4)
+```
+
+---
+
+## Complete workflow example
+
+```{r complete-workflow, eval=FALSE}
+# 1. Read sequences
+seqs <- read_fasta("my_sequences.fasta")
+
+# 2. Align
+aln <- align_sequences(seqs, method = "clustal")
+
+# 3. Build tree
+nj  <- build_tree_nj(aln)
+ml  <- build_tree_ml(aln, model = "GTR")
+
+# 4. Bootstrap
+bs <- bootstrap_tree(aln, tree_method = "nj", num_replicates = 1000,
+                     seed = 42)
+
+# 5. Visualise
+plot_phylo(bs, support_threshold = 70)
+
+# 6. Reroot
+re <- reroot_tree(bs, outgroup = "outgroup_taxon")
+
+# 7. Export
+write_tree(re, "output_tree.nwk", format = "newick")
+write_tree(re, "output_tree.nex", format = "nexus")
+```
+
+---
+
+## Package requirements
+
+| Task | Package | Source |
+|------|---------|--------|
+| Multiple alignment | **msa** | Bioconductor |
+| ML trees | **phangorn** | CRAN |
+| NJ trees, distances | **ape** | CRAN |
+| Tree visualisation | **ggtree** | Bioconductor (optional) |
+
+Install Bioconductor packages with:
+```r
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+BiocManager::install(c("msa", "ggtree"))
+```
+
+---
+
+## References
+
+- Jukes & Cantor (1969). Evolution of protein molecules.
+  *Mammalian Protein Metabolism*, 3, 21–132.
+- Saitou & Nei (1987). The neighbor-joining method.
+  *Mol. Biol. Evol.*, 4(4), 406–425.
+- Felsenstein (1981). Evolutionary trees from DNA sequences.
+  *J. Mol. Evol.*, 17, 368–376.
+- Felsenstein (1985). Confidence limits on phylogenies.
+  *Evolution*, 39(4), 783–791.
+- Schliep (2011). phangorn: phylogenetic analysis in R.
+  *Bioinformatics*, 27(4), 592–593.
