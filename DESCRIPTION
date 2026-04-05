@@ -1,0 +1,31 @@
+Package: agristat
+Title: Comprehensive Biostatistical Suite for Agricultural and Genetic Research
+Version: 0.1.0
+Authors@R: 
+    person("Lungan", "Lungpg", , "lunganlungpg@example.com", role = c("aut", "cre"))
+Description: A comprehensive suite of biostatistical tools for agricultural and
+    genetic research. Provides functions for experimental design, data ingestion,
+    mean separation tests (DMRT, Tukey HSD, Dunnett), orthogonal contrasts,
+    genetic analysis (AMMI, heritability, GWAS), and publication-ready
+    visualization.
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Depends: 
+    R (>= 4.1.0)
+Imports:
+    stats,
+    ggplot2,
+    multcomp,
+    rlang,
+    utils
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    agricolae
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+URL: https://github.com/lunganlungpg/agristat
+BugReports: https://github.com/lunganlungpg/agristat/issues
