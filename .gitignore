@@ -1,3 +1,14 @@
+# R build/check artifacts
+*.Rcheck/
+*.tar.gz
+*.zip
+
+# roxygen2 generated files
+man/*.Rd
+
+# pkgdown site
+docs/
+
 # History files
 .Rhistory
 .Rapp.history
