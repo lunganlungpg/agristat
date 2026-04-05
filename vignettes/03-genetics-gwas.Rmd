@@ -247,5 +247,5 @@ should be close to 1.0 under a well-controlled study.
   Genetics* (4th ed.). Longman.
 - Visscher, P. M. et al. (2017). 10 years of GWAS discovery.
   *American Journal of Human Genetics*, 101, 5--22.
-- Federer, W. T. (1956). Augmented designs. *Hawaiian Planters's Record*,
+- Federer, W. T. (1956). Augmented designs. *Hawaiian Planters' Record*,
   55, 191--208.

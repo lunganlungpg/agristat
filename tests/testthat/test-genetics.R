@@ -16,7 +16,7 @@ test_that("design_alpha_lattice: basic structure", {
 test_that("design_alpha_lattice: every genotype appears in each replicate", {
   d <- design_alpha_lattice(12L, 3L, 2L, seed = 42L)
   for (r in 1:2) {
-    genos_in_rep <- d[d == r]
+    genos_in_rep <- d$genotype[d$rep == r]
     expect_equal(length(unique(genos_in_rep)), 12L)
     expect_equal(length(genos_in_rep), 12L)
   }
@@ -24,13 +24,13 @@ test_that("design_alpha_lattice: every genotype appears in each replicate", {
 
 test_that("design_alpha_lattice: block sizes are correct", {
   d <- design_alpha_lattice(16L, 4L, 3L, seed = 5L)
-  block_sizes <- table(d, d)
+  block_sizes <- table(d$rep, d$block)
   expect_true(all(block_sizes == 4L))
 })
 
 test_that("design_alpha_lattice: plot_id is sequential", {
   d <- design_alpha_lattice(8L, 4L, 2L, seed = 7L)
-  expect_equal(d, seq_len(nrow(d)))
+  expect_equal(d$plot_id, seq_len(nrow(d)))
 })
 
 test_that("design_alpha_lattice: reproducible with seed", {
@@ -52,27 +52,27 @@ test_that("design_incomplete_block: returns field_design", {
   d <- design_incomplete_block(genos, block_size = 3L, replicates = 3L,
                                seed = 1L)
   expect_s3_class(d, "field_design")
-  expect_equal(d, "BIBD")
+  expect_equal(d$design_type, "BIBD")
 })
 
 test_that("design_incomplete_block: layout has correct columns", {
   d <- design_incomplete_block(paste0("G", 1:7), 3L, 3L, seed = 2L)
-  expect_named(d, c("block", "plot_id", "genotype"))
+  expect_named(d$layout, c("block", "plot_id", "genotype"))
 })
 
 test_that("design_incomplete_block: each genotype appears r times", {
   genos <- paste0("G", 1:7)
   d <- design_incomplete_block(genos, block_size = 7L, replicates = 3L,
                                seed = 3L)
-  counts <- table(d)
+  counts <- table(d$layout$genotype)
   expect_true(all(counts == 3L))
 })
 
 test_that("design_incomplete_block: parameters list is populated", {
   d <- design_incomplete_block(paste0("G", 1:7), 3L, 3L, seed = 4L)
-  expect_equal(d, 7L)
-  expect_equal(d, 3L)
-  expect_equal(d, 3L)
+  expect_equal(d$parameters$v, 7L)
+  expect_equal(d$parameters$k, 3L)
+  expect_equal(d$parameters$r, 3L)
 })
 
 test_that("design_incomplete_block: error when block_size >= length(genotypes)", {
@@ -91,15 +91,15 @@ test_that("design_augmented: basic structure", {
 
 test_that("design_augmented: type column has only check/test", {
   d <- design_augmented(paste0("T", 1:8), c("C1", "C2"), 3L, seed = 2L)
-  expect_true(all(d %in% c("check", "test")))
+  expect_true(all(d$type %in% c("check", "test")))
 })
 
 test_that("design_augmented: checks appear in every block", {
   d <- design_augmented(paste0("T", 1:12), c("C1", "C2", "C3"),
                         replicates_checks = 4L, seed = 3L)
-  checks <- d[d == "check", ]
+  checks <- d[d$type == "check", ]
   for (b in 1:4) {
-    block_checks <- checks[checks == b]
+    block_checks <- checks$genotype[checks$block == b]
     expect_true(all(c("C1", "C2", "C3") %in% block_checks))
   }
 })
@@ -107,14 +107,14 @@ test_that("design_augmented: checks appear in every block", {
 test_that("design_augmented: test genotypes appear at most once", {
   tests <- paste0("T", 1:10)
   d <- design_augmented(tests, c("C1", "C2"), 4L, seed = 5L)
-  test_counts <- table(d[d == "test"])
+  test_counts <- table(d$genotype[d$type == "test"])
   expect_true(all(test_counts == 1L))
 })
 
 test_that("design_augmented: all test genotypes are included", {
   tests <- paste0("T", 1:15)
   d <- design_augmented(tests, c("C1"), 3L, seed = 6L)
-  included_tests <- unique(d[d == "test"])
+  included_tests <- unique(d$genotype[d$type == "test"])
   expect_true(all(tests %in% included_tests))
 })
 
@@ -131,7 +131,7 @@ test_that("analyze_gxe: returns gxe_result S3 object", {
   df <- expand.grid(genotype    = paste0("G", 1:5),
                     environment = paste0("E", 1:4),
                     stringsAsFactors = FALSE)
-  df <- rnorm(nrow(df), 5, 1)
+  df$yield <- rnorm(nrow(df), 5, 1)
   res <- analyze_gxe(df, response = "yield")
   expect_s3_class(res, "gxe_result")
 })
@@ -141,7 +141,7 @@ test_that("analyze_gxe: output components present", {
   df <- expand.grid(genotype    = paste0("G", 1:4),
                     environment = paste0("E", 1:3),
                     stringsAsFactors = FALSE)
-  df <- rnorm(nrow(df), 5, 1)
+  df$yield <- rnorm(nrow(df), 5, 1)
   res <- analyze_gxe(df, response = "yield")
   expect_true(all(c("genotype_effects", "env_effects",
                     "interaction_matrix", "stability",
@@ -153,9 +153,9 @@ test_that("analyze_gxe: genotype effects sum to approximately zero", {
   df <- expand.grid(genotype    = paste0("G", 1:5),
                     environment = paste0("E", 1:3),
                     stringsAsFactors = FALSE)
-  df <- rnorm(nrow(df), 5, 1)
+  df$yield <- rnorm(nrow(df), 5, 1)
   res <- analyze_gxe(df, response = "yield")
-  expect_true(abs(sum(res)) < 1e-9)
+  expect_true(abs(sum(res$genotype_effects)) < 1e-9)
 })
 
 test_that("analyze_gxe: stability data frame has correct columns", {
@@ -163,9 +163,9 @@ test_that("analyze_gxe: stability data frame has correct columns", {
   df <- expand.grid(genotype    = paste0("G", 1:3),
                     environment = paste0("E", 1:4),
                     stringsAsFactors = FALSE)
-  df <- rnorm(nrow(df), 5, 1)
+  df$yield <- rnorm(nrow(df), 5, 1)
   res <- analyze_gxe(df, response = "yield")
-  expect_named(res, c("genotype", "env_variance", "mean_yield"))
+  expect_named(res$stability, c("genotype", "env_variance", "mean_yield"))
 })
 
 test_that("analyze_gxe: single environment does not error", {
@@ -181,7 +181,7 @@ test_that("analyze_gxe: print method works", {
   df <- expand.grid(genotype    = paste0("G", 1:3),
                     environment = paste0("E", 1:3),
                     stringsAsFactors = FALSE)
-  df <- rnorm(nrow(df))
+  df$yield <- rnorm(nrow(df))
   res <- analyze_gxe(df, response = "yield")
   expect_output(print(res), "GxE Interaction")
 })
@@ -201,7 +201,7 @@ test_that("fit_ammi: variance_explained sums to 1", {
   mat <- matrix(rnorm(20), nrow = 4,
                 dimnames = list(paste0("G", 1:4), paste0("E", 1:5)))
   am  <- fit_ammi(mat)
-  expect_equal(sum(am), 1, tolerance = 1e-6)
+  expect_equal(sum(am$variance_explained), 1, tolerance = 1e-6)
 })
 
 test_that("fit_ammi: tidy data frame input works", {
@@ -209,37 +209,37 @@ test_that("fit_ammi: tidy data frame input works", {
   df <- expand.grid(genotype    = paste0("G", 1:4),
                     environment = paste0("E", 1:3),
                     stringsAsFactors = FALSE)
-  df <- rnorm(nrow(df), 5, 1)
+  df$yield <- rnorm(nrow(df), 5, 1)
   am <- fit_ammi(df, response = "yield")
   expect_s3_class(am, "ammi_result")
-  expect_equal(nrow(am),   4L)
-  expect_equal(nrow(am), 3L)
+  expect_equal(nrow(am$scores),   4L)
+  expect_equal(nrow(am$loadings), 3L)
 })
 
 test_that("fit_ammi: scores and loadings have correct IPCA column names", {
   mat <- matrix(rnorm(12), nrow = 3,
                 dimnames = list(paste0("G", 1:3), paste0("E", 1:4)))
   am  <- fit_ammi(mat)
-  expect_true(all(grepl("^IPCA", colnames(am))))
-  expect_true(all(grepl("^IPCA", colnames(am))))
+  expect_true(all(grepl("^IPCA", colnames(am$scores))))
+  expect_true(all(grepl("^IPCA", colnames(am$loadings))))
 })
 
 test_that("fit_ammi: interaction matrix dimensions correct", {
   mat <- matrix(rnorm(15), nrow = 3,
                 dimnames = list(paste0("G", 1:3), paste0("E", 1:5)))
   am  <- fit_ammi(mat)
-  expect_equal(dim(am), c(3L, 5L))
+  expect_equal(dim(am$interaction_matrix), c(3L, 5L))
 })
 
 test_that("fit_ammi: SVD accuracy -- reconstruct interaction", {
   set.seed(22L)
   mat <- matrix(rnorm(20), nrow = 4,
                 dimnames = list(paste0("G", 1:4), paste0("E", 1:5)))
-  am  <- fit_ammi(mat)
-  n_axes <- ncol(am)
-  sv     <- am
-  recon  <- am %*% diag(sv, n_axes, n_axes) %*% t(am)
-  int_nona <- am
+  am     <- fit_ammi(mat)
+  n_axes <- ncol(am$scores)
+  sv     <- am$singular_values
+  recon  <- am$scores %*% diag(sv, n_axes, n_axes) %*% t(am$loadings)
+  int_nona <- am$interaction_matrix
   int_nona[is.na(int_nona)] <- 0
   expect_equal(recon, int_nona, tolerance = 1e-8)
 })
@@ -249,7 +249,7 @@ test_that("plot_ammi_biplot: returns ggplot object", {
   df <- expand.grid(genotype    = paste0("G", 1:5),
                     environment = paste0("E", 1:4),
                     stringsAsFactors = FALSE)
-  df <- rnorm(nrow(df), 5, 1.5)
+  df$yield <- rnorm(nrow(df), 5, 1.5)
   am <- fit_ammi(df, response = "yield")
   p  <- plot_ammi_biplot(am)
   expect_s3_class(p, "ggplot")
@@ -270,7 +270,7 @@ test_that("calc_heritability: known H2 value", {
   vc <- data.frame(source   = c("genotype", "residual"),
                    variance = c(2.5, 1.0))
   h  <- calc_heritability(vc, n_boot = 0L)
-  expect_equal(h, 2.5 / 3.5, tolerance = 1e-9)
+  expect_equal(h$H2, 2.5 / 3.5, tolerance = 1e-9)
 })
 
 test_that("calc_heritability: returns heritability_result class", {
@@ -284,21 +284,21 @@ test_that("calc_heritability: h2 is NA when additive variance absent", {
   vc <- data.frame(source   = c("genotype", "residual"),
                    variance = c(1.5, 0.5))
   h  <- calc_heritability(vc, n_boot = 0L)
-  expect_true(is.na(h))
+  expect_true(is.na(h$h2))
 })
 
 test_that("calc_heritability: narrow-sense h2 when additive given", {
   vc <- data.frame(source   = c("genotype", "additive", "residual"),
                    variance = c(2.0, 1.0, 1.0))
   h  <- calc_heritability(vc, n_boot = 0L)
-  expect_equal(h, 1.0 / 3.0, tolerance = 1e-9)
+  expect_equal(h$h2, 1.0 / 3.0, tolerance = 1e-9)
 })
 
 test_that("calc_heritability: accepts 'error' as synonym for 'residual'", {
   vc <- data.frame(source   = c("genotype", "error"),
                    variance = c(3.0, 1.0))
   h  <- calc_heritability(vc, n_boot = 0L)
-  expect_equal(h, 0.75, tolerance = 1e-9)
+  expect_equal(h$H2, 0.75, tolerance = 1e-9)
 })
 
 test_that("calc_heritability: bootstrap CI is ordered and in [0,1]", {
@@ -306,17 +306,17 @@ test_that("calc_heritability: bootstrap CI is ordered and in [0,1]", {
   vc <- data.frame(source   = c("genotype", "residual"),
                    variance = c(2.0, 1.0))
   h  <- calc_heritability(vc, n_boot = 200L, seed = 40L)
-  expect_true(h[1L] <= h[2L])
-  expect_true(all(h >= 0))
-  expect_true(all(h <= 1))
+  expect_true(h$ci_H2[1L] <= h$ci_H2[2L])
+  expect_true(all(h$ci_H2 >= 0))
+  expect_true(all(h$ci_H2 <= 1))
 })
 
 test_that("calc_heritability: interpretation is non-empty string", {
   vc <- data.frame(source   = c("genotype", "residual"),
                    variance = c(4.0, 1.0))
   h  <- calc_heritability(vc, n_boot = 0L)
-  expect_type(h, "character")
-  expect_true(nchar(h) > 0L)
+  expect_type(h$interpretation, "character")
+  expect_true(nchar(h$interpretation) > 0L)
 })
 
 test_that("calc_heritability: error when genotype source missing", {
@@ -357,7 +357,7 @@ test_that("prepare_qtl_data: n_markers equals number of marker columns", {
                     dimnames = list(paste0("ind", seq_len(n)),
                                     paste0("M", seq_len(m))))
   res <- prepare_qtl_data(pheno, markers)
-  expect_equal(res, m)
+  expect_equal(res$n_markers, m)
 })
 
 test_that("prepare_qtl_data: A/H/B coding is converted to 0/1/2", {
@@ -370,8 +370,8 @@ test_that("prepare_qtl_data: A/H/B coding is converted to 0/1/2", {
     dimnames = list(paste0("i", seq_len(n)), paste0("M", seq_len(m)))
   )
   res <- prepare_qtl_data(pheno, markers)
-  expect_true(is.numeric(res))
-  expect_true(all(res %in% c(0L, 1L, 2L), na.rm = TRUE))
+  expect_true(is.numeric(res$genotypes))
+  expect_true(all(res$genotypes %in% c(0L, 1L, 2L), na.rm = TRUE))
 })
 
 test_that("prepare_qtl_data: qc_report has correct columns", {
@@ -382,7 +382,7 @@ test_that("prepare_qtl_data: qc_report has correct columns", {
                     dimnames = list(paste0("ind", seq_len(n)),
                                     paste0("M", seq_len(m))))
   res <- prepare_qtl_data(pheno, markers)
-  expect_named(res,
+  expect_named(res$qc_report,
                c("marker", "missing_rate", "minor_af", "monomorphic"))
 })
 
@@ -423,7 +423,7 @@ test_that("run_basic_gwas: results data frame has required columns", {
   g     <- run_basic_gwas(pheno, gmat)
   expect_true(all(c("marker", "chromosome", "position",
                     "p_value", "neg_log10_p", "beta", "se", "maf") %in%
-                    names(g)))
+                    names(g$results)))
 })
 
 test_that("run_basic_gwas: n_individuals is correct", {
@@ -433,7 +433,7 @@ test_that("run_basic_gwas: n_individuals is correct", {
   gmat  <- matrix(sample(0:2, n * m, replace = TRUE), nrow = n,
                   dimnames = list(NULL, paste0("SNP", seq_len(m))))
   g <- run_basic_gwas(pheno, gmat)
-  expect_equal(g, n)
+  expect_equal(g$n_individuals, n)
 })
 
 test_that("run_basic_gwas: Bonferroni threshold is 0.05/n_tested", {
@@ -445,7 +445,7 @@ test_that("run_basic_gwas: Bonferroni threshold is 0.05/n_tested", {
                   nrow = n,
                   dimnames = list(NULL, paste0("SNP", seq_len(m))))
   g <- run_basic_gwas(pheno, gmat)
-  expect_equal(g, 0.05 / g,
+  expect_equal(g$bonferroni_threshold, 0.05 / g$n_markers_tested,
                tolerance = 1e-12)
 })
 
@@ -456,7 +456,7 @@ test_that("run_basic_gwas: p-values are in (0, 1]", {
   gmat  <- matrix(sample(0:2, n * m, replace = TRUE), nrow = n,
                   dimnames = list(NULL, paste0("SNP", seq_len(m))))
   g     <- run_basic_gwas(pheno, gmat)
-  pvals <- g[!is.na(g)]
+  pvals <- g$results$p_value[!is.na(g$results$p_value)]
   expect_true(all(pvals > 0 & pvals <= 1))
 })
 
@@ -476,7 +476,7 @@ test_that("run_basic_gwas: binary trait option works", {
                   dimnames = list(NULL, paste0("SNP", seq_len(m))))
   g <- run_basic_gwas(pheno, gmat, trait_type = "binary")
   expect_s3_class(g, "gwas_result")
-  expect_equal(g, "binary")
+  expect_equal(g$trait_type, "binary")
 })
 
 test_that("plot_manhattan: returns ggplot", {
@@ -504,11 +504,15 @@ test_that("plot_manhattan: point count matches non-NA p-values", {
                   dimnames = list(NULL, paste0("SNP", seq_len(m))))
   g     <- run_basic_gwas(pheno, gmat)
   p     <- plot_manhattan(g)
-  # Extract data used for geom_point
-  built  <- ggplot2::ggplot_build(p)
-  layers <- built
-  point_layer <- layers[[which(vapply(layers, function(l)
-    "size" %in% names(l), logical(1L)))[1L]]]
+  n_pts <- sum(!is.na(g$results$p_value))
+  # Extract data used for geom_point layer
+  built        <- ggplot2::ggplot_build(p)
+  layers       <- built$data
+  # Find the point layer by looking for the alpha aesthetic
+  point_layers <- which(vapply(layers,
+                               function(l) "alpha" %in% names(l),
+                               logical(1L)))
+  point_layer  <- layers[[point_layers[1L]]]
   expect_equal(nrow(point_layer), n_pts)
 })
 
@@ -555,20 +559,20 @@ test_that("run_basic_gwas: all-missing marker is skipped", {
                     dimnames = list(NULL, paste0("SNP", seq_len(m))))
   gmat[, 1L] <- NA_real_
   g <- run_basic_gwas(pheno, gmat, min_maf = 0.05)
-  expect_true(is.na(g[g == "SNP1"]))
+  expect_true(is.na(g$results$p_value[g$results$marker == "SNP1"]))
 })
 
 test_that("calc_heritability: H2 = 0.5 for equal variances", {
   vc <- data.frame(source   = c("genotype", "residual"),
                    variance = c(1.0, 1.0))
   h  <- calc_heritability(vc, n_boot = 0L)
-  expect_equal(h, 0.5, tolerance = 1e-9)
+  expect_equal(h$H2, 0.5, tolerance = 1e-9)
 })
 
 test_that("format_effect_size: formats correctly", {
   s <- format_effect_size(0.123456, 0.012345, digits = 4L)
   expect_type(s, "character")
-  expect_true(grepl("0\.1235", s))
+  expect_true(grepl("0\\.1235", s))
 })
 
 test_that("prepare_qtl_data: error with no matching IDs", {
