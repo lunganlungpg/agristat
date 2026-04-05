@@ -1,0 +1,62 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# agristat
+
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/lunganlungpg/agristat/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/lunganlungpg/agristat/actions/workflows/R-CMD-check.yaml)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+<!-- badges: end -->
+
+**agristat** is a comprehensive R package providing a complete biostatistical
+workflow for agricultural and genetic research.
+
+## Modules
+
+| # | Module | Key Functions |
+|---|--------|--------------|
+| 1 | **Data Ingestion & Pre-Processing** | `declare_hypothesis()`, `check_assumptions()`, `import_field_data()` |
+| 2 | **Field Layout Engine** | `design_crd()`, `design_rcbd()`, `plot_field_layout()` |
+| 3 | **Breeding & Genetics Analytics** | `ammi_analysis()`, `heritability_broad()` |
+| 4 | **Mean Separation & Post-Hoc Tests** | `tukey_test()`, `duncan_test()` |
+| 5 | **Phylogenetics & Evolutionary Mapping** | `build_phylo_tree()`, `map_traits()` |
+| 6 | **Thesis Assembly Export Suite** | `export_anova_table()`, `render_report()` |
+
+## Installation
+
+```r
+# install.packages("devtools")
+devtools::install_github("lunganlungpg/agristat")
+```
+
+## Quick Start
+
+```r
+library(agristat)
+
+# Declare a hypothesis
+h <- declare_hypothesis(
+  h0    = "No significant difference in yield between varieties",
+  h1    = "At least one variety differs in yield",
+  alpha = 0.05
+)
+print(h)
+
+# Check statistical assumptions
+x   <- c(3.2, 4.1, 3.8, 4.5, 2.9, 3.6, 4.0, 3.7)
+grp <- rep(c("A", "B"), each = 4)
+report <- check_assumptions(x, groups = grp)
+print(report)
+
+# Mendelian segregation test (3:1 ratio)
+result <- chi_square_segregation(c(75, 25), c(3, 1))
+print(result)
+```
+
+## License
+
+GPL (>= 3).
