@@ -1,0 +1,118 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# agristat <img src="man/figures/logo.png" align="right" height="139" alt="" />
+
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/lunganlungpg/agristat/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/lunganlungpg/agristat/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/lunganlungpg/agristat/branch/main/graph/badge.svg)](https://app.codecov.io/gh/lunganlungpg/agristat?branch=main)
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![CRAN status](https://www.r-pkg.org/badges/version/agristat)](https://CRAN.R-project.org/package=agristat)
+<!-- badges: end -->
+
+**agristat** is a comprehensive R package providing a complete biostatistical
+workflow for agricultural and genetic research. It implements six integrated
+modules covering the full analysis pipeline from data ingestion to
+thesis-ready output.
+
+## Modules
+
+| # | Module | Key Functions |
+|---|--------|--------------|
+| 1 | **Data Ingestion & Pre-Processing** | `declare_hypothesis()`, `check_assumptions()`, `import_field_data()` |
+| 2 | **Field Layout Engine** | `design_crd()`, `design_rcbd()`, `plot_field_layout()` |
+| 3 | **Breeding & Genetics Analytics** | `ammi_analysis()`, `heritability_broad()`, `combining_ability()` |
+| 4 | **Mean Separation & Post-Hoc Tests** | `tukey_test()`, `duncan_test()`, `scott_knott_test()` |
+| 5 | **Phylogenetics & Evolutionary Mapping** | `build_phylo_tree()`, `map_traits()`, `plot_phylo()` |
+| 6 | **Thesis Assembly Export Suite** | `export_anova_table()`, `render_report()`, `export_to_word()` |
+
+## Installation
+
+You can install the development version of agristat from
+[GitHub](https://github.com/lunganlungpg/agristat) with:
+
+```{r install, eval = FALSE}
+# install.packages("devtools")
+devtools::install_github("lunganlungpg/agristat")
+```
+
+Once released on CRAN:
+
+```{r cran-install, eval = FALSE}
+install.packages("agristat")
+```
+
+## Quick Start
+
+```{r example, eval = FALSE}
+library(agristat)
+
+# --- Module 1: Declare and track a hypothesis ---
+h <- declare_hypothesis(
+  H0    = "No significant difference in yield between varieties",
+  H1    = "At least one variety differs in yield",
+  alpha = 0.05
+)
+print(h)
+
+# --- Module 1: Check statistical assumptions ---
+data("rice_yield")
+assump <- check_assumptions(
+  data     = rice_yield,
+  response = "yield",
+  group    = "variety"
+)
+summary(assump)
+
+# --- Module 2: Generate a field layout ---
+layout <- design_rcbd(
+  treatments = paste0("V", 1:6),
+  blocks     = 3
+)
+plot_field_layout(layout)
+
+# --- Module 3: AMMI stability analysis ---
+ammi_result <- ammi_analysis(
+  data        = rice_yield,
+  genotype    = "variety",
+  environment = "location",
+  response    = "yield"
+)
+
+# --- Module 4: Post-hoc mean separation ---
+model  <- aov(yield ~ variety + block, data = rice_yield)
+posthoc <- tukey_test(model, treatment = "variety")
+format_mean_table(posthoc)
+
+# --- Module 6: Export results ---
+export_anova_table(model, file = "anova_results.docx")
+```
+
+## Requirements
+
+- R ≥ 4.1.0
+- Key dependencies: `ggplot2`, `dplyr`, `lme4`, `agricolae`, `ape`, `phangorn`, `car`, `multcomp`
+
+## Contributing
+
+Contributions are welcome! Please see
+[CONTRIBUTING.md](https://github.com/lunganlungpg/agristat/blob/main/CONTRIBUTING.md)
+for guidelines. By participating you agree to abide by the
+[Code of Conduct](https://github.com/lunganlungpg/agristat/blob/main/CODE_OF_CONDUCT.md).
+
+## License
+
+GPL (>= 3). See [LICENSE](LICENSE) for details.
