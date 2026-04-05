@@ -1,0 +1,250 @@
+---
+title: "04 — Mean Separation & Post-Hoc Tests"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{04 — Mean Separation & Post-Hoc Tests}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4
+)
+```
+
+```{r load, message=FALSE}
+library(agristat)
+```
+
+## Introduction
+
+After a significant ANOVA F-test, the practitioner needs to determine *which*
+treatment means differ. This is the **mean separation** or **post-hoc testing**
+step. The `agristat` package provides four methods:
+
+| Method | Function | Error-rate control |
+|--------|----------|--------------------|
+| Duncan's MRT | `dmrt()` | Experimentwise |
+| Tukey's HSD | `tukey_hsd()` | Family-wise (FWER) |
+| Dunnett's test | `dunnett_test()` | Family-wise vs control |
+| Orthogonal contrasts | `test_contrasts()` | Per-contrast |
+
+The unified dispatcher `mean_separation()` routes to the appropriate function
+automatically.
+
+---
+
+## Example Dataset
+
+We use a simple one-way ANOVA with four rice varieties:
+
+```{r data}
+set.seed(2024)
+dat <- data.frame(
+  yield = c(
+    rnorm(5, mean = 4.2, sd = 0.3),   # Variety A
+    rnorm(5, mean = 3.8, sd = 0.3),   # Variety B
+    rnorm(5, mean = 5.1, sd = 0.3),   # Variety C
+    rnorm(5, mean = 4.5, sd = 0.3)    # Variety D
+  ),
+  variety = factor(rep(c("A", "B", "C", "D"), each = 5))
+)
+
+fit <- aov(yield ~ variety, data = dat)
+summary(fit)
+```
+
+The ANOVA is significant. We can now proceed to mean separation.
+
+---
+
+## 1. Duncan's Multiple Range Test (DMRT)
+
+DMRT is widely used in agricultural journals. It maximises power (most
+liberal) and is best for exploratory experiments.
+
+```{r dmrt}
+res_dmrt <- mean_separation(fit, method = "dmrt")
+print(res_dmrt)
+```
+
+### Direct call
+
+```{r dmrt-direct}
+cell_means <- tapply(dat$yield, dat$variety, mean)
+aov_sum    <- summary(fit)[[1]]
+mse        <- aov_sum["Residuals", "Mean Sq"]
+df_res     <- aov_sum["Residuals", "Df"]
+
+dmrt_res <- dmrt(
+  means = cell_means,
+  mse   = mse,
+  df    = df_res,
+  alpha = 0.05,
+  n     = 5
+)
+print(dmrt_res)
+```
+
+### Visualisation
+
+```{r plot-dmrt, fig.cap="Treatment means with DMRT letters"}
+plot_means(res_dmrt, y_label = "Grain Yield (t/ha)", mse = mse, n_rep = 5)
+```
+
+---
+
+## 2. Tukey's Honestly Significant Difference (HSD)
+
+Tukey's HSD controls the family-wise error rate at $\alpha$ for *all*
+pairwise comparisons simultaneously. Recommended for confirmatory studies.
+
+```{r tukey}
+res_tukey <- mean_separation(fit, method = "tukey")
+print(res_tukey)
+```
+
+### Interval plot
+
+```{r plot-tukey, fig.cap="Tukey HSD pairwise confidence intervals"}
+plot_tukey(res_tukey$results)
+```
+
+---
+
+## 3. Comparing DMRT vs Tukey
+
+```{r compare}
+cat("DMRT letters:\n")
+print(res_dmrt$means_with_letters[, c("treatment", "mean", "letters")])
+
+cat("\nTukey letters:\n")
+print(res_tukey$means_with_letters[, c("treatment", "mean", "letters")])
+```
+
+DMRT typically produces more significant differences (more groups) than
+Tukey's HSD because it uses a lower critical value for small spans.
+
+---
+
+## 4. Dunnett's Test (Treatment vs Control)
+
+When the objective is only to compare each treatment against a **control
+group**, Dunnett's test provides greater power than pairwise tests.
+
+```{r dunnett-data}
+set.seed(2024)
+dat2 <- data.frame(
+  response = c(
+    rnorm(6, mean = 10.0, sd = 1.0),   # control
+    rnorm(6, mean = 12.5, sd = 1.0),   # drug A
+    rnorm(6, mean = 10.3, sd = 1.0)    # drug B
+  ),
+  group = factor(rep(c("control", "drugA", "drugB"), each = 6))
+)
+fit2 <- aov(response ~ group, data = dat2)
+```
+
+```{r dunnett}
+res_dunnett <- mean_separation(fit2, method = "dunnett",
+                               control_group = "control")
+print(res_dunnett)
+```
+
+Alternatively, call `dunnett_test()` directly:
+
+```{r dunnett-direct}
+d_res <- dunnett_test(
+  response  = dat2$response,
+  group     = dat2$group,
+  control   = "control",
+  alpha     = 0.05,
+  alternative = "two.sided"
+)
+print(d_res)
+```
+
+---
+
+## 5. Orthogonal Contrasts
+
+Orthogonal contrasts partition the treatment SS into interpretable
+single-degree-of-freedom components. They are best for **planned**,
+hypothesis-driven comparisons.
+
+```{r contrasts-data}
+set.seed(2024)
+dat3 <- data.frame(
+  yield = c(
+    rnorm(4, mean = 10, sd = 1),   # A: low N
+    rnorm(4, mean = 12, sd = 1),   # B: medium N
+    rnorm(4, mean = 14, sd = 1),   # C: high N
+    rnorm(4, mean = 11, sd = 1)    # D: high N + micronutrient
+  ),
+  trt = factor(rep(c("A", "B", "C", "D"), each = 4))
+)
+fit3 <- aov(yield ~ trt, data = dat3)
+```
+
+Define a set of **orthogonal** contrasts:
+
+```{r contrasts}
+# Contrasts (rows must sum to 0; inner products must equal 0)
+cmat <- rbind(
+  "Low vs High N"    = c( 1,  1, -1, -1) / 2,
+  "A vs B"           = c( 1, -1,  0,  0),
+  "C vs D"           = c( 0,  0,  1, -1)
+)
+
+validate_contrasts(cmat)  # Should return TRUE
+
+res_contr <- mean_separation(fit3, method = "contrasts",
+                              contrast_matrix = cmat)
+print(res_contr)
+format_contrast_output(res_contr$results)
+```
+
+---
+
+## 6. Choosing the Right Test
+
+```
+Is there a designated control group?
+├─ YES → Use dunnett_test()  (most powerful for this case)
+└─ NO
+   ├─ Were comparisons planned before collecting data?
+   │  ├─ YES → Use test_contrasts()  (greatest power for specific hypotheses)
+   │  └─ NO (all pairwise)
+   │     ├─ Confirmatory / publication with FWER control → tukey_hsd()
+   │     └─ Exploratory / maximum power                  → dmrt()
+```
+
+---
+
+## 7. Unequal Replication
+
+Both `dmrt()` and `tukey_hsd()` handle unequal replication via the harmonic
+mean approach:
+
+```{r unequal}
+set.seed(7)
+dat_unequal <- data.frame(
+  yield = c(rnorm(3, 10), rnorm(5, 12), rnorm(4, 11)),
+  trt   = factor(c(rep("A", 3), rep("B", 5), rep("C", 4)))
+)
+fit_uneq <- aov(yield ~ trt, data = dat_unequal)
+res_uneq  <- mean_separation(fit_uneq, method = "dmrt")
+print(res_uneq$means_with_letters)
+```
+
+---
+
+## Session info
+
+```{r session}
+sessionInfo()
+```
