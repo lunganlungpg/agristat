@@ -329,7 +329,8 @@ print.methods_text <- function(x, ...) {
 #'   yield = c(rnorm(5, 4), rnorm(5, 5), rnorm(5, 3)),
 #'   trt   = rep(c("A", "B", "C"), each = 5)
 #' )
-#' res <- analyze_design(dat, response = "yield", treatment = "trt")
+#' d   <- design_crd(c("A", "B", "C"), replicates = 5L, seed = 1L)
+#' res <- analyze_design(d, response = "yield", data = d$layout)
 #' cat(export_results_table(res))
 #'
 #' @seealso [generate_methods_text()], [compile_report()]

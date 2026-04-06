@@ -285,7 +285,7 @@ test_that("compile_report: creates .Rmd file", {
   mt  <- generate_methods_text(d)
   out <- file.path(getwd(), "test_report_out")
   on.exit(unlink(c(paste0(out, ".Rmd"), paste0(out, ".md"),
-                   paste0(out, ".html")), force = TRUE),
+                   paste0(out, ".html"))),
           add = TRUE)
   res <- compile_report(methods_text_obj = mt, output_file = out,
                         template = "html", title = "Test Report")
@@ -301,7 +301,7 @@ test_that("compile_report: sections_included records methods", {
   mt  <- generate_methods_text(d)
   out <- file.path(getwd(), "test_report_sec")
   on.exit(unlink(c(paste0(out, ".Rmd"), paste0(out, ".md"),
-                   paste0(out, ".html")), force = TRUE),
+                   paste0(out, ".html"))),
           add = TRUE)
   res <- compile_report(methods_text_obj = mt, output_file = out)
   expect_true("methods" %in% res$sections_included)
@@ -312,7 +312,7 @@ test_that("compile_report: results_tables section recorded", {
   tbl     <- export_results_table(aov_res, format = "markdown")
   out     <- file.path(getwd(), "test_report_tbl")
   on.exit(unlink(c(paste0(out, ".Rmd"), paste0(out, ".md"),
-                   paste0(out, ".html")), force = TRUE),
+                   paste0(out, ".html"))),
           add = TRUE)
   res <- compile_report(results_tables = list(ANOVA = tbl),
                         output_file = out)
