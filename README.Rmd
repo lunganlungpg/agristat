@@ -13,18 +13,19 @@ output: github_document
 <!-- badges: end -->
 
 **agristat** is a comprehensive R package providing a complete biostatistical
-workflow for agricultural and genetic research.
+workflow for agricultural and genetic research — from experimental design
+through publication-ready output.
 
 ## Modules
 
 | # | Module | Key Functions |
-|---|--------|--------------|
-| 1 | **Data Ingestion & Pre-Processing** | `declare_hypothesis()`, `check_assumptions()`, `import_field_data()` |
-| 2 | **Field Layout Engine** | `design_crd()`, `design_rcbd()`, `plot_field_layout()` |
-| 3 | **Breeding & Genetics Analytics** | `ammi_analysis()`, `heritability_broad()` |
-| 4 | **Mean Separation & Post-Hoc Tests** | `tukey_test()`, `duncan_test()` |
-| 5 | **Phylogenetics & Evolutionary Mapping** | `build_phylo_tree()`, `map_traits()` |
-| 6 | **Thesis Assembly Export Suite** | `export_anova_table()`, `render_report()` |
+|---|---|---|
+| 1 | **Data Ingestion & Pre-Processing** | `import_field_data()`, `declare_hypothesis()`, `check_assumptions()`, `auto_transform()`, `chi_square_segregation()` |
+| 2 | **Field Layout Engine** | `design_crd()`, `design_rcbd()`, `design_factorial()`, `design_split_plot()`, `analyze_design()`, `plot_field_layout()` |
+| 3 | **Breeding & Genetics Analytics** | `fit_ammi()`, `analyze_gxe()`, `calc_heritability()`, `run_basic_gwas()`, `plot_manhattan()` |
+| 4 | **Mean Separation & Post-Hoc Tests** | `dmrt()`, `tukey_hsd()`, `dunnett_test()`, `mean_separation()`, `plot_means()` |
+| 5 | **Phylogenetics & Evolutionary Mapping** | `read_fasta()`, `align_sequences()`, `build_tree_nj()`, `build_tree_ml()`, `bootstrap_tree()`, `plot_phylo()` |
+| 6 | **Thesis Assembly & Export** | `generate_methods_text()`, `export_results_table()`, `export_figure()`, `compile_report()`, `thesis_template_methods()` |
 
 ## Installation
 
@@ -38,7 +39,7 @@ devtools::install_github("lunganlungpg/agristat")
 ```r
 library(agristat)
 
-# Declare a hypothesis
+# ── Module 1: Declare a hypothesis ──────────────────────────────────────────
 h <- declare_hypothesis(
   h0    = "No significant difference in yield between varieties",
   h1    = "At least one variety differs in yield",
@@ -46,16 +47,39 @@ h <- declare_hypothesis(
 )
 print(h)
 
-# Check statistical assumptions
-x   <- c(3.2, 4.1, 3.8, 4.5, 2.9, 3.6, 4.0, 3.7)
-grp <- rep(c("A", "B"), each = 4)
-report <- check_assumptions(x, groups = grp)
-print(report)
+# ── Module 2: Design a field experiment ─────────────────────────────────────
+design <- design_rcbd(
+  treatments = c("Control", "T1", "T2", "T3"),
+  blocks     = 4L,
+  seed       = 42L
+)
+plot_field_layout(design)
 
-# Mendelian segregation test (3:1 ratio)
-result <- chi_square_segregation(c(75, 25), c(3, 1))
-print(result)
+# ── Module 2: Analyse the design ─────────────────────────────────────────────
+df <- design$layout
+df$yield <- rnorm(nrow(df), mean = 5, sd = 0.8)
+aov_res  <- analyze_design(design, response = "yield", data = df)
+summary(aov_res)
+
+# ── Module 4: Post-hoc mean separation ──────────────────────────────────────
+trt_means <- tapply(df$yield, df$treatment, mean)
+ph <- dmrt(trt_means, mse = 0.64, df = 9, n = 4)
+print(ph)
+
+# ── Module 6: Export results ─────────────────────────────────────────────────
+mt  <- generate_methods_text(design, aov_res, ph)
+cat(mt$text)
+cat(export_results_table(aov_res, format = "markdown"))
 ```
+
+## Vignettes
+
+- [01 Data Ingestion & Pre-Processing](vignettes/01-data-ingestion.Rmd)
+- [02 Field Designs](vignettes/02-field-designs.Rmd)
+- [03 Genetics & GWAS](vignettes/03-genetics-gwas.Rmd)
+- [04 Mean Separation](vignettes/04-mean-separation.Rmd)
+- [05 Phylogenetics](vignettes/05-phylogenetics.Rmd)
+- [06 Thesis Assembly & Export](vignettes/06-thesis-export.Rmd)
 
 ## License
 
