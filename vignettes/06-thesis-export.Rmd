@@ -47,18 +47,6 @@ We use a simple rice-yield trial throughout this vignette.
 ```{r data}
 set.seed(2024)
 
-# Raw field data
-field_data <- data.frame(
-  yield = c(
-    rnorm(5, mean = 4.2, sd = 0.4),   # Variety A
-    rnorm(5, mean = 3.8, sd = 0.4),   # Variety B
-    rnorm(5, mean = 4.9, sd = 0.4),   # Variety C
-    rnorm(5, mean = 3.5, sd = 0.4)    # Variety D
-  ),
-  variety = rep(c("A", "B", "C", "D"), each = 5),
-  block   = rep(1:5, times = 4)
-)
-
 # Experimental design
 rcbd_design <- design_rcbd(
   treatments = c("A", "B", "C", "D"),
@@ -66,15 +54,28 @@ rcbd_design <- design_rcbd(
   seed       = 2024L
 )
 
+# Attach simulated yield to the randomised layout
+field_data <- rcbd_design$layout
+set.seed(2024)
+mean_yields <- c(A = 4.2, B = 3.8, C = 4.9, D = 3.5)
+field_data$yield <- mean_yields[field_data$treatment] + rnorm(nrow(field_data), 0, 0.4)
+
+# For convenience, also keep a plain data frame with original variety labels
+plain_data <- data.frame(
+  yield   = field_data$yield,
+  variety = field_data$treatment,
+  block   = field_data$block
+)
+
 # ANOVA
 aov_result <- analyze_design(
-  field_data,
-  response  = "yield",
-  treatment = "variety"
+  design   = rcbd_design,
+  response = "yield",
+  data     = field_data
 )
 
 # DMRT post-hoc
-variety_means <- tapply(field_data$yield, field_data$variety, mean)
+variety_means <- tapply(plain_data$yield, plain_data$variety, mean)
 dmrt_result   <- dmrt(variety_means, mse = 0.16, df = 12, n = 5)
 ```
 
@@ -156,7 +157,7 @@ export_results_table(
 ```{r export-figure, eval=FALSE}
 library(ggplot2)
 
-p <- ggplot(field_data, aes(variety, yield, fill = variety)) +
+p <- ggplot(plain_data, aes(variety, yield, fill = variety)) +
   geom_boxplot(alpha = 0.7) +
   labs(title = "Grain Yield by Variety", x = "Variety",
        y = "Yield (t/ha)") +

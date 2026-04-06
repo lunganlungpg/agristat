@@ -21,12 +21,11 @@ make_rcbd <- function() {
 }
 
 make_aov <- function() {
+  d  <- design_crd(c("A", "B", "C"), replicates = 5L, seed = 99L)
+  df <- d$layout
   set.seed(99)
-  dat <- data.frame(
-    yield = c(rnorm(5, 4.2, 0.5), rnorm(5, 5.1, 0.5), rnorm(5, 3.8, 0.5)),
-    trt   = rep(c("A", "B", "C"), each = 5)
-  )
-  analyze_design(dat, response = "yield", treatment = "trt")
+  df$yield <- c(rnorm(5, 4.2, 0.5), rnorm(5, 5.1, 0.5), rnorm(5, 3.8, 0.5))
+  analyze_design(d, response = "yield", data = df)
 }
 
 make_dmrt <- function() {
@@ -253,9 +252,12 @@ test_that("generate_appendix: $tables contains descriptive_stats", {
 })
 
 test_that("generate_appendix: with analysis_obj adds normality_test", {
-  dat <- make_df()
-  aov_res <- analyze_design(dat, response = "yield", treatment = "trt")
-  app <- generate_appendix(dat, analysis_obj = aov_res)
+  d   <- design_crd(c("A", "B", "C", "D"), replicates = 5L, seed = 7L)
+  df  <- d$layout
+  set.seed(7)
+  df$yield <- rnorm(20, 5, 1)
+  aov_res  <- analyze_design(d, response = "yield", data = df)
+  app <- generate_appendix(make_df(), analysis_obj = aov_res)
   expect_true("normality_test" %in% names(app$tables))
 })
 
