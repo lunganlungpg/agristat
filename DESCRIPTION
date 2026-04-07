@@ -2,6 +2,7 @@ Package: agristat
 Type: Package
 Title: Comprehensive Biostatistical Suite for Agricultural and Genetic Research
 Version: 1.0.0
+Date: 2026-04-07
 Authors@R: person("Lung An", "Lung Pg", email = "lunganlungpg@example.com", role = c("aut", "cre"))
 Description: A comprehensive R package implementing all six AgriStat modules for
     agricultural research: (1) data ingestion with hypothesis tracking and assumption
