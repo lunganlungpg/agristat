@@ -1,6 +1,3 @@
-#' @keywords internal
-"_PACKAGE"
-
 #' agristat: Comprehensive Biostatistical Suite for Agricultural and Genetic Research
 #'
 #' @description
@@ -23,12 +20,11 @@
 #'
 #' ### Module 3 — Breeding & Genetics Analytics
 #' Implementation of AMMI analysis, GGE biplots, heritability estimation,
-#' combining ability (GCA/SCA), and Mendelian segregation tests.
+#' and Mendelian segregation tests.
 #'
 #' ### Module 4 — Mean Separation & Post-Hoc Tests
 #' A unified interface to multiple comparison procedures including Tukey HSD,
-#' Duncan's Multiple Range Test, Fisher's LSD, Scott-Knott, and non-parametric
-#' alternatives.
+#' Duncan's Multiple Range Test, Dunnett's test, and user-defined contrasts.
 #'
 #' ### Module 5 — Phylogenetics & Evolutionary Mapping
 #' Wrappers around `ape` and `phangorn` for constructing phylogenetic trees,
@@ -41,7 +37,5 @@
 #'
 #' @author Lung An Lung Pg \email{lunganlungpg@@example.com}
 #'
-#' @docType package
-#' @name agristat-package
-#' @aliases agristat
-NULL
+#' @keywords internal
+"_PACKAGE"

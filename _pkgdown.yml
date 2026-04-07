@@ -26,15 +26,15 @@ navbar:
         - text: Data Ingestion & Pre-Processing
           href: articles/01-data-ingestion.html
         - text: Field Layout Engine
-          href: articles/field-layouts.html
+          href: articles/02-field-designs.html
         - text: Breeding & Genetics Analytics
-          href: articles/genetics.html
+          href: articles/03-genetics-gwas.html
         - text: Mean Separation & Post-Hoc Tests
-          href: articles/posthoc.html
+          href: articles/04-mean-separation.html
         - text: Phylogenetics & Evolutionary Mapping
-          href: articles/phylogenetics.html
-        - text: Thesis Assembly Export Suite
-          href: articles/thesis-export.html
+          href: articles/05-phylogenetics.html
+        - text: Thesis Assembly & Export
+          href: articles/06-thesis-export.html
     news:
       text: News
       href: news/index.html
@@ -60,48 +60,87 @@ reference:
       - suggest_nonparametric
       - chi_square_segregation
       - import_field_data
-      - format_p_value
-      - format_statistic
 
   - title: "Module 2 — Field Layout Engine"
     desc: >
       Tools for constructing and visualising agricultural experimental designs.
     contents:
-      - starts_with("design_")
-      - starts_with("plot_field_layout")
-      - starts_with("randomise_layout")
+      - design_crd
+      - design_rcbd
+      - design_factorial
+      - design_split_plot
+      - design_split_split_plot
+      - design_strip_plot
+      - design_latin_square
+      - design_alpha_lattice
+      - design_incomplete_block
+      - design_augmented
+      - analyze_design
+      - compute_error_terms
+      - plot_field_layout
+      - plot_anova_diagnostics
 
   - title: "Module 3 — Breeding & Genetics Analytics"
     desc: >
-      AMMI analysis, GGE biplots, heritability, and combining ability.
+      AMMI analysis, GxE interaction, heritability estimation, QTL mapping,
+      and GWAS.
     contents:
-      - starts_with("ammi_")
-      - starts_with("gge_")
-      - starts_with("heritability_")
-      - starts_with("combining_ability")
+      - analyze_gxe
+      - fit_ammi
+      - plot_ammi_biplot
+      - calc_heritability
+      - prepare_qtl_data
+      - plot_qtl_map
+      - run_basic_gwas
+      - plot_manhattan
+      - plot_qq_gwas
 
   - title: "Module 4 — Mean Separation & Post-Hoc Tests"
     desc: >
       Multiple comparison procedures and mean separation letter formatting.
     contents:
-      - ends_with("_test")
-      - starts_with("format_mean_table")
+      - mean_separation
+      - dmrt
+      - tukey_hsd
+      - dunnett_test
+      - test_contrasts
+      - plot_means
+      - plot_tukey
+      - assign_letters
+      - assign_letters_from_matrix
+      - validate_contrasts
+      - format_contrast_output
 
   - title: "Module 5 — Phylogenetics & Evolutionary Mapping"
     desc: >
       Phylogenetic tree construction, genetic distances, and trait mapping.
     contents:
-      - starts_with("build_phylo")
-      - starts_with("compute_distances")
-      - starts_with("map_traits")
+      - read_fasta
+      - validate_sequence_format
+      - align_sequences
+      - compute_distance_matrix
+      - build_tree_nj
+      - build_tree_ml
+      - bootstrap_tree
+      - extract_bootstrap_values
+      - plot_phylo
+      - plot_tree_unrooted
+      - reroot_tree
+      - write_tree
 
-  - title: "Module 6 — Thesis Assembly Export Suite"
+  - title: "Module 6 — Thesis Assembly & Export"
     desc: >
       Publication-ready tables, figures, and report generation utilities.
     contents:
-      - starts_with("export_")
-      - starts_with("build_thesis")
-      - starts_with("render_report")
+      - generate_methods_text
+      - export_results_table
+      - export_figure
+      - generate_appendix
+      - compile_report
+      - thesis_template_methods
+      - thesis_template_results
+      - thesis_template_discussion
+      - fill_template
 
 footer:
   structure:
