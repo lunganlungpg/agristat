@@ -1,0 +1,148 @@
+url: https://lunganlungpg.github.io/agristat/
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+home:
+  title: "agristat — Biostatistical Suite for Agricultural & Genetic Research"
+  description: >
+    A comprehensive R package for agricultural and genetic research implementing
+    six integrated analytical modules from data ingestion to thesis-ready output.
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, github]
+  components:
+    intro:
+      text: Get Started
+      href: articles/agristat.html
+    reference:
+      text: Reference
+      href: reference/index.html
+    articles:
+      text: Articles
+      menu:
+        - text: Data Ingestion & Pre-Processing
+          href: articles/01-data-ingestion.html
+        - text: Field Layout Engine
+          href: articles/02-field-designs.html
+        - text: Breeding & Genetics Analytics
+          href: articles/03-genetics-gwas.html
+        - text: Mean Separation & Post-Hoc Tests
+          href: articles/04-mean-separation.html
+        - text: Phylogenetics & Evolutionary Mapping
+          href: articles/05-phylogenetics.html
+        - text: Thesis Assembly & Export
+          href: articles/06-thesis-export.html
+    news:
+      text: News
+      href: news/index.html
+    github:
+      icon: fa-github
+      href: https://github.com/lunganlungpg/agristat
+
+reference:
+  - title: "Package overview"
+    desc: >
+      Top-level package documentation.
+    contents:
+      - agristat-package
+
+  - title: "Module 1 — Data Ingestion & Pre-Processing"
+    desc: >
+      Functions for importing field trial data, declaring hypotheses, and
+      testing statistical assumptions.
+    contents:
+      - declare_hypothesis
+      - check_assumptions
+      - auto_transform
+      - suggest_nonparametric
+      - chi_square_segregation
+      - import_field_data
+
+  - title: "Module 2 — Field Layout Engine"
+    desc: >
+      Tools for constructing and visualising agricultural experimental designs.
+    contents:
+      - design_crd
+      - design_rcbd
+      - design_factorial
+      - design_split_plot
+      - design_split_split_plot
+      - design_strip_plot
+      - design_latin_square
+      - design_alpha_lattice
+      - design_incomplete_block
+      - design_augmented
+      - analyze_design
+      - compute_error_terms
+      - plot_field_layout
+      - plot_anova_diagnostics
+
+  - title: "Module 3 — Breeding & Genetics Analytics"
+    desc: >
+      AMMI analysis, GxE interaction, heritability estimation, QTL mapping,
+      and GWAS.
+    contents:
+      - analyze_gxe
+      - fit_ammi
+      - plot_ammi_biplot
+      - calc_heritability
+      - prepare_qtl_data
+      - plot_qtl_map
+      - run_basic_gwas
+      - plot_manhattan
+      - plot_qq_gwas
+
+  - title: "Module 4 — Mean Separation & Post-Hoc Tests"
+    desc: >
+      Multiple comparison procedures and mean separation letter formatting.
+    contents:
+      - mean_separation
+      - dmrt
+      - tukey_hsd
+      - dunnett_test
+      - test_contrasts
+      - plot_means
+      - plot_tukey
+      - assign_letters
+      - assign_letters_from_matrix
+      - validate_contrasts
+      - format_contrast_output
+
+  - title: "Module 5 — Phylogenetics & Evolutionary Mapping"
+    desc: >
+      Phylogenetic tree construction, genetic distances, and trait mapping.
+    contents:
+      - read_fasta
+      - validate_sequence_format
+      - align_sequences
+      - compute_distance_matrix
+      - build_tree_nj
+      - build_tree_ml
+      - bootstrap_tree
+      - extract_bootstrap_values
+      - plot_phylo
+      - plot_tree_unrooted
+      - reroot_tree
+      - write_tree
+
+  - title: "Module 6 — Thesis Assembly & Export"
+    desc: >
+      Publication-ready tables, figures, and report generation utilities.
+    contents:
+      - generate_methods_text
+      - export_results_table
+      - export_figure
+      - generate_appendix
+      - compile_report
+      - thesis_template_methods
+      - thesis_template_results
+      - thesis_template_discussion
+      - fill_template
+
+footer:
+  structure:
+    left: developed_by
+    right: built_with

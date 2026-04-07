@@ -1,0 +1,346 @@
+---
+title: "06 — Thesis Assembly & Export"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{06 — Thesis Assembly & Export}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  fig.width  = 7,
+  fig.height = 4
+)
+```
+
+```{r load, message=FALSE}
+library(agristat)
+```
+
+## Introduction
+
+Module 6 of **agristat** automates the final step of an agricultural research
+workflow: assembling thesis chapters and exporting publication-ready outputs.
+The module provides:
+
+| Function | Purpose |
+|---|---|
+| `generate_methods_text()` | Auto-generate a methods-section paragraph |
+| `export_results_table()` | Format results as Markdown / HTML / LaTeX / CSV |
+| `export_figure()` | Save ggplot2 or base-R plots in publication formats |
+| `generate_appendix()` | Produce appendix with descriptive stats & assumption tests |
+| `compile_report()` | Assemble all components into one Rmd/Markdown report |
+| `thesis_template_methods()` | Methods-section template with fill-in placeholders |
+| `thesis_template_results()` | Results-section template |
+| `thesis_template_discussion()` | Discussion-section template |
+| `fill_template()` | Replace `{placeholder}` tokens with actual values |
+
+---
+
+## 1  Shared Example Data
+
+We use a simple rice-yield trial throughout this vignette.
+
+```{r data}
+set.seed(2024)
+
+# Experimental design
+rcbd_design <- design_rcbd(
+  treatments = c("A", "B", "C", "D"),
+  blocks     = 5L,
+  seed       = 2024L
+)
+
+# Attach simulated yield to the randomised layout
+field_data <- rcbd_design$layout
+set.seed(2024)
+mean_yields <- c(A = 4.2, B = 3.8, C = 4.9, D = 3.5)
+field_data$yield <- mean_yields[field_data$treatment] + rnorm(nrow(field_data), 0, 0.4)
+
+# For convenience, also keep a plain data frame with original variety labels
+plain_data <- data.frame(
+  yield   = field_data$yield,
+  variety = field_data$treatment,
+  block   = field_data$block
+)
+
+# ANOVA
+aov_result <- analyze_design(
+  design   = rcbd_design,
+  response = "yield",
+  data     = field_data
+)
+
+# DMRT post-hoc
+variety_means <- tapply(plain_data$yield, plain_data$variety, mean)
+dmrt_result   <- dmrt(variety_means, mse = 0.16, df = 12, n = 5)
+```
+
+---
+
+## 2  Generating the Methods Text
+
+`generate_methods_text()` inspects the design object and automatically
+writes a methods paragraph.
+
+```{r methods-text}
+mt <- generate_methods_text(
+  design_obj  = rcbd_design,
+  analysis_obj = aov_result,
+  posthoc_obj  = dmrt_result,
+  software     = TRUE
+)
+
+cat(mt$text)
+```
+
+The object has three named sections and a references vector:
+
+```{r methods-sections}
+names(mt$sections)
+mt$references
+```
+
+---
+
+## 3  Exporting Results Tables
+
+### 3.1  ANOVA Table
+
+```{r anova-markdown}
+cat(export_results_table(aov_result, format = "markdown"))
+```
+
+### 3.2  Means & Letter Groups
+
+```{r means-markdown}
+cat(export_results_table(dmrt_result, format = "markdown"))
+```
+
+### 3.3  HTML Table
+
+```{r means-html, results='asis'}
+cat(export_results_table(dmrt_result, format = "html"))
+```
+
+### 3.4  LaTeX Table (for inclusion in `.tex` files)
+
+```{r means-latex}
+cat(export_results_table(aov_result, format = "latex"))
+```
+
+### 3.5  CSV Export
+
+```{r means-csv}
+cat(export_results_table(dmrt_result, format = "csv"))
+```
+
+### 3.6  Writing to a File
+
+```{r table-file, eval=FALSE}
+export_results_table(
+  aov_result,
+  format = "markdown",
+  file   = "anova_table.md"
+)
+```
+
+---
+
+## 4  Exporting Figures
+
+### 4.1  Saving a ggplot2 Figure
+
+```{r export-figure, eval=FALSE}
+library(ggplot2)
+
+p <- ggplot(plain_data, aes(variety, yield, fill = variety)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(title = "Grain Yield by Variety", x = "Variety",
+       y = "Yield (t/ha)") +
+  theme_classic()
+
+info <- export_figure(
+  plot_obj = p,
+  file     = "yield_boxplot",
+  format   = "png",
+  width    = 7,
+  height   = 5,
+  dpi      = 300,
+  title    = "Figure 1: Grain Yield by Rice Variety"
+)
+
+cat("Saved:", info$file_path, "\n")
+cat("Size:", info$size_kb, "KB\n")
+```
+
+### 4.2  Supported Formats
+
+| `format` | Description |
+|---|---|
+| `"png"` | Raster; default for on-screen and Word |
+| `"pdf"` | Vector; ideal for LaTeX-based theses |
+| `"svg"` | Scalable vector; good for HTML reports |
+| `"eps"` | Encapsulated PostScript; required by some journals |
+
+---
+
+## 5  Generating an Appendix
+
+`generate_appendix()` creates three appendix sections automatically:
+
+```{r appendix}
+app <- generate_appendix(
+  data         = field_data,
+  design_obj   = rcbd_design,
+  analysis_obj = aov_result
+)
+
+cat("Observations:", app$n_obs, "\n")
+cat("Missing values:", app$n_missing, "\n")
+cat("Sections:", paste(names(app$sections), collapse = ", "), "\n")
+```
+
+### Appendix A — Data Summary
+
+```{r appendix-data, results='asis'}
+cat(app$sections$data_summary)
+```
+
+### Appendix B — Assumption Tests
+
+```{r appendix-assump, results='asis'}
+cat(app$sections$assumption_tests)
+```
+
+---
+
+## 6  Using Thesis Templates
+
+### 6.1  Methods Template
+
+Templates contain `{placeholder}` tokens that you fill with real values
+using `fill_template()`.
+
+```{r template-methods}
+tmpl_m <- thesis_template_methods(
+  design_type    = "rcbd",
+  analysis_type  = "anova",
+  experiment_type = "plant"
+)
+
+# See the available placeholders
+tmpl_m$placeholders
+```
+
+```{r fill-methods}
+filled_methods <- fill_template(tmpl_m, list(
+  n_treatments       = 4,
+  n_replicates       = 5,
+  n_total            = 20,
+  design_description = paste(
+    "Treatments (four rice varieties: A, B, C, D) were laid out in",
+    "five randomised complete blocks."
+  ),
+  model_formula      = "y_{ij} = \\mu + \\tau_i + \\beta_j + \\varepsilon_{ij}",
+  software_versions  = paste0("R ", R.version$major, ".", R.version$minor),
+  citations          = "R Core Team (2024)."
+))
+
+cat(filled_methods)
+```
+
+### 6.2  Results Template
+
+```{r template-results}
+tmpl_r  <- thesis_template_results(include_posthoc = TRUE)
+tmpl_r$placeholders
+```
+
+```{r fill-results}
+anova_tbl <- export_results_table(aov_result, format = "markdown")
+means_tbl <- export_results_table(dmrt_result, format = "markdown")
+
+filled_results <- fill_template(tmpl_r, list(
+  anova_significance = "significant",
+  response_variable  = "grain yield",
+  table_number       = "1",
+  anova_table        = anova_tbl,
+  min_mean           = round(min(variety_means), 2),
+  max_mean           = round(max(variety_means), 2),
+  means_letters      = means_tbl,
+  figure_number      = "1",
+  figure_caption     = "Boxplot of grain yield by variety.",
+  interpretation     = paste(
+    "Variety C produced the highest yield while Variety D was the lowest.",
+    "All pairwise differences were significant at P <= 0.05."
+  )
+))
+
+cat(filled_results)
+```
+
+### 6.3  Discussion Template
+
+```{r template-discussion}
+tmpl_d <- thesis_template_discussion(
+  topic               = "grain_yield",
+  include_limitations = TRUE
+)
+
+filled_disc <- fill_template(tmpl_d, list(
+  key_findings        = "Significant variety effects on grain yield were observed (P < 0.05).",
+  comparison_literature = "These results are consistent with previous reports of variety C superiority (Smith et al., 2020).",
+  implications        = "Variety C should be recommended for adoption in similar agro-ecological zones.",
+  limitations         = "The trial was conducted in a single season; multi-season validation is needed.",
+  conclusion          = "Variety C significantly outyielded all other entries in this study."
+))
+
+cat(filled_disc)
+```
+
+---
+
+## 7  Compiling a Complete Report
+
+`compile_report()` assembles all components into a single Rmd document and
+renders it if **rmarkdown** is available.
+
+```{r compile, eval=FALSE}
+res <- compile_report(
+  methods_text_obj = mt,
+  results_tables   = list(
+    "ANOVA Table"  = export_results_table(aov_result,  format = "markdown"),
+    "Means Table"  = export_results_table(dmrt_result, format = "markdown")
+  ),
+  figures          = c("yield_boxplot.png"),
+  appendix_obj     = app,
+  output_file      = "rice_yield_report",
+  template         = "html",
+  title            = "Rice Variety Yield Trial — Statistical Analysis",
+  author           = "A. Researcher",
+  date             = format(Sys.Date(), "%d %B %Y")
+)
+
+cat("Report written to:", res$output_file, "\n")
+cat("Sections included:", paste(res$sections_included, collapse = ", "), "\n")
+```
+
+---
+
+## Summary
+
+The Module 6 workflow in agristat follows these steps:
+
+1. **Design** — create a layout with `design_rcbd()` etc.
+2. **Analyse** — run `analyze_design()` and post-hoc tests.
+3. **Methods text** — `generate_methods_text()` → paste into thesis.
+4. **Tables** — `export_results_table()` in the format your document needs.
+5. **Figures** — `export_figure()` for publication-quality images.
+6. **Appendix** — `generate_appendix()` for supporting materials.
+7. **Templates** — use `thesis_template_*()` + `fill_template()` for a
+   consistent academic writing style.
+8. **Report** — `compile_report()` to bundle everything automatically.

@@ -1,0 +1,52 @@
+Package: agristat
+Type: Package
+Title: Comprehensive Biostatistical Suite for Agricultural and Genetic Research
+Version: 1.0.0
+Date: 2026-04-07
+Authors@R: person("Lung An", "Lung Pg", email = "lunganlungpg@example.com", role = c("aut", "cre"))
+Description: A comprehensive R package implementing all six AgriStat modules for
+    agricultural research: (1) data ingestion with hypothesis tracking and assumption
+    testing, (2) field layout engine for agricultural experimental designs,
+    (3) breeding/genetics analytics including AMMI and heritability calculations,
+    (4) mean separation and post-hoc statistical tests, (5) phylogenetics and
+    evolutionary mapping, and (6) automated thesis output generation. The package
+    provides publication-ready statistical analysis workflows following R best
+    practices.
+License: GPL (>= 3)
+Encoding: UTF-8
+RoxygenNote: 7.3.2
+Roxygen: list(markdown = TRUE)
+URL: https://github.com/lunganlungpg/agristat
+BugReports: https://github.com/lunganlungpg/agristat/issues
+Depends: R (>= 4.1.0)
+Imports:
+    ggplot2 (>= 3.4.0),
+    dplyr,
+    tidyr,
+    readr,
+    rlang,
+    stats,
+    utils,
+    tools,
+    sf,
+    car,
+    agricolae,
+    lme4,
+    nlme,
+    multcomp,
+    ape,
+    phangorn,
+    survival
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    covr,
+    pkgdown,
+    roxygen2,
+    readxl,
+    msa,
+    ggtree,
+    officer,
+    flextable
+Config/testthat/edition: 3

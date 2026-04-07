@@ -1,3 +1,11 @@
+# R build/check artifacts
+*.Rcheck/
+*.tar.gz
+*.zip
+
+# pkgdown site
+docs/
+
 # History files
 .Rhistory
 .Rapp.history
